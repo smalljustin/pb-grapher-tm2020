@@ -1,0 +1,10 @@
+[meta]
+name = "PB Grapher"
+author = "sgt_bigbird"
+category = "Overlay"
+version = "0.0.1"
+
+[script]
+dependencies = [ "VehicleState", "Camera" ]
+timeout = 0
+# defines = ["DEV"]
