@@ -1,19 +1,53 @@
 class PbGrapherWindow {
     float padding = 0;
-    int ACTIVE_NUM_CPS;
-    float MAX_MAP_TIME;
+    int ACTIVE_NUM_CPS = 0;
+    float MAX_MAP_TIME = 0;
     vec4 valueRange = vec4(0, ACTIVE_NUM_CPS, 0, MAX_MAP_TIME);
     vec2 min, max;
-    string active_map_uuid;
+    string active_map_uuid = "";
+
+    int current_run_starttime;
+    int current_run_id;
+    int current_cp_id;
+    int current_cp_idx;
+
+    bool loaded = false;
+
+    array<array<CpLog>> cp_log_array(0, array<CpLog>(0));
+    array<CpLog> active_run_buffer(0, CpLog());
+
+    
+    PbGrapherWindow() {
+    }
+
+    void Update() {
+        handleMapUpdate();
+        if (getCurrentCheckpoint() == -1) {
+            return;
+        }
+        handleRunStart();
+        handleWatchCheckpoint();
+    }
+
+    void Render(vec2 parentSize, float LineWidth) {
+        float _padding = padding;
+        min = vec2(_padding, parentSize.y - _padding);
+        max = vec2(parentSize.x - _padding, _padding);
+
+        for (int i = 0; i < cp_log_array.Length; i++) {
+            renderCpLogArray(cp_log_array[i]);
+        }
+    }
+
+    bool isIdxFinish(int idx) {
+        return getPlayground().Arena.MapLandmarks[idx].Waypoint.IsFinish;
+    }
 
     void UpdateSettings() {
 
     }
 
-    array<array<CpLog>> cpLogArray(0, array<CpLog>(0));
-    
-    PbGrapherWindow() {
-    }
+
 
     // bool isNotFullyInitialized() { 
     //     auto playground = getPlayground();
@@ -22,13 +56,84 @@ class PbGrapherWindow {
     //         || playground.GameTerminals.Length != 1
     //         || playground.Interface is null;
     // }
-
+     
     int getCurrentGameTime() {
         return getPlayground().Interface.ManialinkScriptHandler.GameTime;
     }
 
+    /**
+     * Returns the player's starting time as an integer. 
+     */
     int getPlayerStartTime() {
         return getPlayer().StartTime;
+    }
+
+    /**
+     * handleRunStart: To be called at the beginning of each frame. 
+     * Returns true if the run is continuing, and false if it has been reset.
+     */
+    bool handleRunStart() {
+        if (getPlayerStartTime() == current_run_starttime) {
+            // Continuing a run. 
+            return true;
+        } else {
+            current_run_starttime = getPlayerStartTime();
+            current_run_id += 1;
+            current_cp_idx = 0;
+            // If we've reset, we're now at the start checkpoint. 
+            // Don't save this run.
+            current_cp_id = getCurrentCheckpoint();
+            return false;
+        }
+    }
+
+    void handleWatchCheckpoint() {
+        if (getCurrentCheckpoint() == current_cp_id) {
+            return;
+        } else {
+            active_run_buffer.InsertLast(
+                CpLog(active_map_uuid, current_run_id, current_cp_idx, getCurrentRunTime())
+            );
+            current_cp_idx += 1;
+            current_cp_id = getCurrentCheckpoint();
+        }
+        if (isIdxFinish(current_cp_id)) {
+            MAX_MAP_TIME = getCurrentRunTime();
+            ACTIVE_NUM_CPS = Math::Max(ACTIVE_NUM_CPS, current_cp_idx);
+            persistActiveBuffer();
+            reloadValueRange();
+            log(tostring(valueRange));
+        }
+    }
+
+    void handleCpIdx() {
+        if (getCurrentCheckpoint() == current_cp_id) {
+            // Still at that checkpoint.
+        } else {
+            current_cp_id = getCurrentCheckpoint();
+            current_cp_idx += 1;
+            saveCheckpointInformation();
+        }
+    }
+
+    int getCurrentRunTime() {
+        return getCurrentGameTime() - getPlayerStartTime();
+    }
+
+    /**
+     * Saves the previous checkpoint information to the active run buffer.
+     */
+    void saveCheckpointInformation() {
+        active_run_buffer.InsertLast(
+            CpLog(active_map_uuid, current_run_id, current_cp_idx, getCurrentRunTime())
+        );
+    }
+
+    void persistActiveBuffer() {
+        databasefunctions.persistBuffer(active_run_buffer);
+        cp_log_array.InsertLast(active_run_buffer);
+        cp_log_array.RemoveAt(0);
+        active_run_buffer.RemoveRange(0, active_run_buffer.Length);
     }
 
     int getCurrentCheckpoint() {
@@ -75,13 +180,15 @@ class PbGrapherWindow {
         return -1;
     }
 
-    array < array < CpLog >> activeDataPoints(10, array < CpLog >(NUM_PAST_GHOSTS, CpLog()));
 
     void reloadValueRange() {
-        valueRange = vec4(0, ACTIVE_NUM_CPS, -MAX_MAP_TIME, 0);
+        valueRange = vec4(0, ACTIVE_NUM_CPS, 0, MAX_MAP_TIME);
     }
 
     void renderCpLogArray(array<CpLog> cpLogArray) {
+        if (cpLogArray.Length == 0) {
+            return;
+        }
         nvg::BeginPath();
         nvg::MoveTo(TransformToViewBounds(ClampVec2(vec2(0, cpLogArray[0].cp_time), valueRange), min, max));
         for (int i = 1; i < cpLogArray.Length; i++) {
@@ -95,38 +202,27 @@ class PbGrapherWindow {
 
     void handleMapUpdate() {
         string map_uuid = getMapUid();
-        if (map_uuid == active_map_uuid) {
+        if (map_uuid == "" || map_uuid == active_map_uuid) {
             return;
         }
-        cpLogArray.RemoveRange(0, cpLogArray.Length);
-        // otherwise, we need to pull out all the existing datapoints for this map
-        cpLogArray = databasefunctions.getCpLogsForMap(map_uuid);
-        for (int i = 0; i < cpLogArray.Length; i++) {
-            // log("### I = " + tostring(i));
-            for (int j = 0; j < cpLogArray[i].Length; j++) {
-                // log("### J = " + tostring(j));
-                // log(cpLogArray[i][j].tostring());
-            }
+        active_map_uuid = map_uuid;
+        current_run_id = databasefunctions.getNumRunsForMap(map_uuid) + 1;
+        cp_log_array = databasefunctions.getCpLogsForMap(map_uuid);
+        
+        if (cp_log_array.Length > 0 && cp_log_array[0].Length > 0) {
+            CpLog fastest_previous_run = cp_log_array[0][cp_log_array[0].Length - 1];
+            ACTIVE_NUM_CPS = fastest_previous_run.cp_id;
+            MAX_MAP_TIME = fastest_previous_run.cp_time * 1.2;
+        } else {
+            ACTIVE_NUM_CPS = 0;
+            MAX_MAP_TIME = 100 * 100;
         }
+
+        reloadValueRange();
     }
 
 
-    void Update() {
-        handleMapUpdate();
-        log(tostring(getCurrentCheckpoint()));
-        log(tostring(getPlayerStartTime()));
-        log(tostring(getCurrentGameTime()));
-    }
 
-    void Render(vec2 parentSize, float LineWidth) {
-        float _padding = padding;
-        if (!GEAR_INPUT_TOOL_ENABLED) {
-            _padding = 0;
-        }
-        min = vec2(_padding, parentSize.y - _padding);
-        max = vec2(parentSize.x - _padding, _padding);
-        handleMapUpdate();
-    }
 
     void DrawSpeedLine(float vel_t, vec4 color) {
         nvg::BeginPath();

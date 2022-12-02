@@ -33,6 +33,6 @@ class CpLog
 	string tostring() {
 		return "{\"cp_log_id\": " + cp_log_id + ", \"map_uuid\": \"" + map_uuid 
 		+ "\"\", \"run_id\": " + run_id + ", \"cp_id\": " + cp_id
-		+ "\"cp_time\": " + cp_time + "}";
+		+ ", \"cp_time\": " + cp_time + "}";
 	}
 }

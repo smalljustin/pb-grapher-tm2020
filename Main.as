@@ -5,7 +5,7 @@ float HALF_PI = 1.57079632679;
 string surface_override = "";
 
 
-vec2 m_size;
+vec2 m_size = vec2(400, 400);
 
 void Update(float dt) {
   graphHud.update();
@@ -33,25 +33,7 @@ void Render() {
         }
       }
     }
-
-    if (app!is null && app.GameScene!is null) {
-      if (UseCurrentlyViewedPlayer) {
-        graphHud.Render(VehicleState::ViewingPlayerState());
-      } else {
-        CSceneVehicleVis @[] allStates = VehicleState::GetAllVis(app.GameScene);
-        if (allStates.Length > 0) {
-          if (player_index < 0 || (allStates!is null && allStates.Length > player_index)) {
-            graphHud.Render(allStates[player_index].AsyncState);
-          } else {
-            UI::SetNextWindowContentSize(400, 150);
-            UI::Begin("\\$f33Invalid player index!");
-            UI::Text("No player found within player states at index " + tostring(player_index));
-            UI::Text("");
-            UI::End();
-          }
-        }
-      }
-    }
+    graphHud.Render();
   }
 }
 

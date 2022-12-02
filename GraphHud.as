@@ -49,10 +49,9 @@ class GraphHud {
 
 
 
-    void Render(CSceneVehicleVisState @ visState) {
+    void Render() {
         nvg::BeginPath();
         nvg::RoundedRect(graph_x_offset, graph_y_offset, m_size.x, m_size.y, BorderRadius);
-
         nvg::FillColor(BackdropColor);
         nvg::Fill();
 
