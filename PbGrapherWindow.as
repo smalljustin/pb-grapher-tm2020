@@ -36,6 +36,9 @@ class PbGrapherWindow {
     }
 
     void Render(vec2 parentSize, float LineWidth) {
+        if (cp_log_array.Length < 2) {
+            return;
+        }
         float _padding = padding;
         min = vec2(_padding, parentSize.y - _padding);
         max = vec2(parentSize.x - _padding, _padding);
@@ -53,7 +56,7 @@ class PbGrapherWindow {
     }
 
     void UpdateSettings() {
-
+        doCpLogRefresh(active_map_uuid);
     }
 
 
@@ -86,11 +89,11 @@ class PbGrapherWindow {
             return true;
         } else {
             current_run_starttime = getPlayerStartTime();
-            current_run_id += 1;
             current_cp_idx = 0;
             // If we've reset, we're now at the start checkpoint. 
             // Don't save this run.
             current_cp_id = getCurrentCheckpoint();
+            active_run_buffer.RemoveRange(0, active_run_buffer.Length);
             return false;
         }
     }
@@ -107,8 +110,9 @@ class PbGrapherWindow {
         }
 
         if (isIdxFinish(current_cp_id)) {
-            log("saving new run?");
-            saveNewFastestRunIfFastest(active_run_buffer);
+            databasefunctions.persistBuffer(active_run_buffer);
+            current_run_id += 1;
+            doCpLogRefresh(active_map_uuid);        
         }
     }
 
@@ -126,32 +130,14 @@ class PbGrapherWindow {
         return getCurrentGameTime() - getPlayerStartTime();
     }
 
-    void saveNewFastestRunIfFastest(array<CpLog> active_run_buffer) {
-        if (active_run_buffer is null || active_run_buffer.Length == 0){
-            return; 
-        }
-        log("130");
-
-        CpLog last_cp_of_run = active_run_buffer[active_run_buffer.Length - 1];
-        log(last_cp_of_run.tostring());
-        log(fastest_run.tostring());
-        if (fastest_run.cp_time == 0 || last_cp_of_run.cp_time < fastest_run.cp_time) {
-            log("Test pass; saving.");
-            databasefunctions.persistBuffer(active_run_buffer);
-            doCpLogRefresh(active_map_uuid);
-        }
-        active_run_buffer.RemoveRange(0, active_run_buffer.Length);
-    }
-
-
     void updateFastestRun(CpLog in_cplog) {
+        log("Updating fastest run: " + in_cplog.tostring());
         fastest_run = in_cplog;
         ACTIVE_NUM_CPS = fastest_run.cp_id;
         if (fastest_run_cp_times.Length != fastest_run.cp_id + 1) {
             fastest_run_cp_times.Resize(fastest_run.cp_id + 1);
             slowest_run_cp_times.Resize(fastest_run.cp_id + 1);
         }
-
     }
 
     /**
@@ -161,13 +147,6 @@ class PbGrapherWindow {
         active_run_buffer.InsertLast(
             CpLog(active_map_uuid, current_run_id, current_cp_idx, getCurrentRunTime())
         );
-    }
-
-    void persistActiveBuffer() {
-        databasefunctions.persistBuffer(active_run_buffer);
-        cp_log_array.InsertLast(active_run_buffer);
-        cp_log_array.RemoveAt(0);
-        active_run_buffer.RemoveRange(0, active_run_buffer.Length);
     }
 
     int getCurrentCheckpoint() {
@@ -216,7 +195,7 @@ class PbGrapherWindow {
 
 
     void reloadValueRange() {
-        valueRange = vec4(0, 1, -1.5, 1.5);
+        valueRange = vec4(0, 1, 0, 1);
     }
 
     void renderCpLogArray(array<CpLog> drawn_cp_array, vec4 color) {
@@ -233,13 +212,8 @@ class PbGrapherWindow {
             float st = slowest_run_cp_times[drawn_cp_array[i].cp_id];
             float ct = drawn_cp_array[i].cp_time;
             y_loc = (st - ct) / (st - ft);
-            if (x_loc > 1 || y_loc > MAX_MAP_TIME) {
-                // Finish this iteration of the loop, but break right after.
-                i = drawn_cp_array.Length;
-                x_loc = Math::Min(x_loc, 1);
-            } 
-            vec4 activeValueRange = valueRange;
-            nvg::LineTo(TransformToViewBounds(ClampVec2(vec2(x_loc, y_loc), activeValueRange), min, max));
+
+            nvg::LineTo(TransformToViewBounds(ClampVec2(vec2(x_loc, y_loc), valueRange), min, max));
         }
         nvg::StrokeColor(color);
         nvg::StrokeWidth(LineWidth);
@@ -251,22 +225,24 @@ class PbGrapherWindow {
 
     void doCpLogRefresh(string map_uuid) {
         active_map_uuid = map_uuid;
-        current_run_id = databasefunctions.getNumRunsForMap(map_uuid) + 1;
+        current_run_id = databasefunctions.getMaxPreviousRunId(map_uuid) + 1;
         cp_log_array = databasefunctions.getCpLogsForMap(map_uuid);
 
         if (cp_log_array.Length > 0 && cp_log_array[0].Length > 0) {
             updateFastestRun(cp_log_array[0][cp_log_array[0].Length - 1]);
-            array<CpLog> target_fastest_run = cp_log_array[0];
-            array<CpLog> target_slowest_run = cp_log_array[cp_log_array.Length - 1];
-
-            for (int i = 0; i < target_fastest_run.Length; i++) {
-                fastest_run_cp_times[target_fastest_run[i].cp_id] = target_fastest_run[i].cp_time;
+            for(int i = 0; i < cp_log_array[0].Length; i++) {
+                float _min = 10 ** 5;
+                float _max = 0; 
+                for (int j = 0; j < cp_log_array.Length; j++) {
+                    if (cp_log_array[j].Length == 0) {
+                        continue;
+                    }
+                    _min = Math::Min(_min, cp_log_array[j][i].cp_time);
+                    _max = Math::Max(_max, cp_log_array[j][i].cp_time);
+                }
+                fastest_run_cp_times[i] = _max;
+                slowest_run_cp_times[i] = _min;
             }
-            for (int i = 0; i < target_slowest_run.Length; i++) {
-                slowest_run_cp_times[target_slowest_run[i].cp_id] = target_slowest_run[i].cp_time;
-            }
-            MAX_MAP_TIME = target_slowest_run[target_slowest_run.Length - 1].cp_time;
-
         } else {
             ACTIVE_NUM_CPS = 0;
             MAX_MAP_TIME = 100 * 100;

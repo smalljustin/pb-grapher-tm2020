@@ -185,5 +185,5 @@ int TRANSITION_BASE_FACTOR = 2;
 bool INVERT_SLIP = false;
 
 // ############ NEW SHIT
-[Setting category="General" name="Number past runs to draw"]
+[Setting category="General" name="Number past runs to draw" drag min=2 max=20]
 int NUM_PAST_GHOSTS = 10;

@@ -10,9 +10,8 @@ class DatabaseFunctions {
 		)
 		GROUP BY map_uuid, run_id
         ORDER BY run_time ASC
-        LIMIT """ + tostring(NUM_PAST_GHOSTS) + """
         )
-        SELECT cl.* FROM cp_log cl 
+        SELECT cl.cp_log_id, cl.map_uuid, cl.run_id, cl.cp_id, cl.cp_time FROM cp_log cl 
         JOIN run_time rt 
         ON cl.map_uuid = rt.map_uuid AND cl.run_id = rt.run_id
         WHERE cl.map_uuid = ?
@@ -33,10 +32,20 @@ class DatabaseFunctions {
         
     }
 
+    int getMaxPreviousRunId(string _map_uuid) {
+        SQLite::Statement@ num_runs_stmt = database.Prepare("SELECT max(run_id) max_id FROM cp_log WHERE map_uuid = ? AND cp_id = 0 GROUP BY map_uuid");
+        num_runs_stmt.Bind(1, _map_uuid);
+        num_runs_stmt.Execute();
+        num_runs_stmt.NextRow();
+        if (!num_runs_stmt.NextRow()) {
+            return 0;
+        };
+        return num_runs_stmt.GetColumnInt("max_id");
+    }
+
     int getNumRunsForMap(string _map_uuid) {
         SQLite::Statement@ num_runs_stmt = database.Prepare("SELECT count(run_id) num_runs FROM cp_log WHERE map_uuid = ? AND cp_id = 0 GROUP BY map_uuid");
         num_runs_stmt.Bind(1, _map_uuid);
-        log(num_runs_stmt.GetQueryExpanded());
         num_runs_stmt.Execute();
         num_runs_stmt.NextRow();
         if (!num_runs_stmt.NextRow()) {
@@ -48,37 +57,38 @@ class DatabaseFunctions {
     array<array<CpLog>> getCpLogsForMap(string _map_uuid) {
         int num_runs = getNumRunsForMap(_map_uuid);
 
-        array<array<CpLog>> cpLogsForMap(Math::Min(NUM_PAST_GHOSTS, num_runs), array<CpLog>());
+        array<array<CpLog>> cpLogsForMap(num_runs, array<CpLog>());
 
         if (num_runs == 0) {
             return cpLogsForMap;
         }
 
         int current_run = -1;
-        int idx = -1; 
+        int idx = -1;
 
-        log("L61");
         SQLite::Statement@ statement = database.Prepare(getCpLogsForMapSql);
         statement.Bind(1, _map_uuid);
-        log("\n" + statement.GetQueryExpanded());
-        statement.Execute();
+        log("\n" + statement.GetQueryExpanded() + "\n");
+        // statement.Execute(); not needed; query auto-runs.
         while (statement.NextRow()) {
             CpLog cp_log_tmp = CpLog(statement);
-            if (cp_log_tmp.run_id != current_run){
+            log(cp_log_tmp.tostring());
+            if (cp_log_tmp.run_id != current_run) {
+                if (idx >= (NUM_PAST_GHOSTS - 1)) {
+                    break;
+                }
                 idx += 1;
                 current_run = cp_log_tmp.run_id;
             }
             cpLogsForMap[idx].InsertLast(cp_log_tmp);
         }
+        log("Returning " + cpLogsForMap.Length + " runs.");
 
         for (int i = 0; i < cpLogsForMap.Length; i++) {
-            if (cpLogsForMap[i][0].cp_id != 0) {
-                log("Warning: First cp doesn't have an index of zero! Removing this one.");
-                cpLogsForMap.RemoveAt(i);
+            for (int j = 0; j < cpLogsForMap[i].Length; j++) {
+                log(tostring(i) + tostring(j) + cpLogsForMap[i][j].tostring());
             }
         }
-
-        log("Returning " + cpLogsForMap.Length);
         return cpLogsForMap;
     }
 
