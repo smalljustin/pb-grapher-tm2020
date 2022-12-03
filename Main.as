@@ -5,7 +5,7 @@ float HALF_PI = 1.57079632679;
 string surface_override = "";
 
 
-vec2 m_size = vec2(400, 400);
+vec2 m_size = vec2(graph_width, graph_height);
 
 void Update(float dt) {
   graphHud.update();
@@ -33,7 +33,8 @@ void Render() {
         }
       }
     }
-    graphHud.Render();
+    if (getMapUid() != "")
+      graphHud.Render();
   }
 }
 
