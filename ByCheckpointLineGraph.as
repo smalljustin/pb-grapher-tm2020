@@ -1,4 +1,5 @@
-class PbGrapherWindow {
+class ByCheckpointLineGraph
+{
     float padding = 0;
     int ACTIVE_NUM_CPS = 0;
     float MAX_MAP_TIME = 0;
@@ -10,6 +11,7 @@ class PbGrapherWindow {
     int current_run_id;
     int current_cp_id;
     int current_cp_idx;
+    int current_lap = 1;
 
     bool loaded = false;
 
@@ -20,10 +22,25 @@ class PbGrapherWindow {
     array<array<CpLog>> cp_log_array(0, array<CpLog>(0));
     array<CpLog> active_run_buffer(0, CpLog());
 
-    vec4 renderTrailsColor(1, 1, 1, 1);
+    ByCheckpointLineGraph() {
+    }
 
-    
-    PbGrapherWindow() {
+
+
+    void Render(vec2 parentSize, float LineWidth) {
+        if (cp_log_array.Length == 0) {
+            return;
+        }
+        float _padding = padding;
+        min = vec2(_padding, parentSize.y - _padding);
+        max = vec2(parentSize.x - _padding, _padding);
+
+        vec4 active_color = POINT_FADE_COLOR;
+
+        for (int i = 0; i < Math::Min(cp_log_array.Length, NUM_LINE_PAST_GHOSTS); i++) {
+            renderCpLogArray(cp_log_array[i], active_color);
+            active_color *= (RUN_FALLOFF_RATIO ** 3);
+        }
     }
 
     void Update() {
@@ -35,22 +52,6 @@ class PbGrapherWindow {
         handleWatchCheckpoint();
     }
 
-    void Render(vec2 parentSize, float LineWidth) {
-        if (cp_log_array.Length < 2) {
-            return;
-        }
-        float _padding = padding;
-        min = vec2(_padding, parentSize.y - _padding);
-        max = vec2(parentSize.x - _padding, _padding);
-
-        vec4 active_color = renderTrailsColor;
-
-        for (int i = 0; i < cp_log_array.Length; i++) {
-            renderCpLogArray(cp_log_array[i], active_color);
-            active_color *= 0.7;
-        }
-    }
-
     bool isIdxFinish(int idx) {
         return getPlayground().Arena.MapLandmarks[idx].Waypoint.IsFinish;
     }
@@ -58,25 +59,20 @@ class PbGrapherWindow {
     void UpdateSettings() {
         doCpLogRefresh(active_map_uuid);
     }
-
-
-    // bool isNotFullyInitialized() { 
-    //     auto playground = getPlayground();
-    //     return playground is null 
-    //         || playground.GameTerminals is null
-    //         || playground.GameTerminals.Length != 1
-    //         || playground.Interface is null;
-    // }
      
     int getCurrentGameTime() {
         return getPlayground().Interface.ManialinkScriptHandler.GameTime;
     }
 
-    /**
-     * Returns the player's starting time as an integer. 
-     */
     int getPlayerStartTime() {
         return getPlayer().StartTime;
+    }
+
+    int getNumLaps() {
+        return GetApp().RootMap.TMObjective_NbLaps;
+    }
+    bool isMultiLap() {
+        return GetApp().RootMap.TMObjective_IsLapRace;
     }
 
     /**
@@ -109,10 +105,25 @@ class PbGrapherWindow {
             current_cp_id = getCurrentCheckpoint();
         }
 
-        if (isIdxFinish(current_cp_id)) {
+        bool race_completed = false;
+        if (isMultiLap()) {
+            log("Current lap: " + tostring(current_lap));
+            if (isIdxFinish(current_cp_id)) {
+                if (current_lap == getNumLaps()) {
+                    race_completed = true;
+                    current_lap = 1;
+                } else {
+                    current_lap += 1;
+                }
+            }
+        } else if (isIdxFinish(current_cp_id)) {
+            race_completed = true;
+        }
+        if (race_completed) {
             databasefunctions.persistBuffer(active_run_buffer);
             current_run_id += 1;
-            doCpLogRefresh(active_map_uuid);        
+            doCpLogRefresh(active_map_uuid);
+            race_completed = false;
         }
     }
 
@@ -131,7 +142,6 @@ class PbGrapherWindow {
     }
 
     void updateFastestRun(CpLog in_cplog) {
-        log("Updating fastest run: " + in_cplog.tostring());
         fastest_run = in_cplog;
         ACTIVE_NUM_CPS = fastest_run.cp_id;
         if (fastest_run_cp_times.Length != fastest_run.cp_id + 1) {
@@ -176,24 +186,6 @@ class PbGrapherWindow {
         return null;
     }
 
-    int getEngineRpm() {
-        CSmArenaClient @ playground = cast < CSmArenaClient > (GetApp().CurrentPlayground);
-        if (playground!is null) {
-            if (playground.GameTerminals.Length > 0) {
-                CGameTerminal @ terminal = cast < CGameTerminal > (playground.GameTerminals[0]);
-                CSmPlayer @ player = cast < CSmPlayer > (terminal.GUIPlayer);
-                if (player!is null) {
-                    CSmScriptPlayer @ script_player = cast < CSmScriptPlayer > (player.ScriptAPI);
-                    if (script_player!is null) {
-                        return script_player.EngineRpm;
-                    }
-                }
-            }
-        }
-        return -1;
-    }
-
-
     void reloadValueRange() {
         valueRange = vec4(0, 1, 0, 1);
     }
@@ -204,12 +196,12 @@ class PbGrapherWindow {
         }
         float x_loc, y_loc; 
         nvg::BeginPath();
-        nvg::MoveTo(TransformToViewBounds(ClampVec2(vec2(0, 0), valueRange), min, max));
+        nvg::MoveTo(TransformToViewBounds(ClampVec2(vec2(0, 0.5), valueRange), min, max));
         for (int i = 0; i < drawn_cp_array.Length; i++) {
             x_loc = fastest_run_cp_times[drawn_cp_array[i].cp_id] / fastest_run.cp_time;
 
-            float ft = fastest_run_cp_times[drawn_cp_array[i].cp_id];
-            float st = slowest_run_cp_times[drawn_cp_array[i].cp_id];
+            float ft = fastest_run_cp_times[drawn_cp_array[i].cp_id] + PB_TOP_MULT;
+            float st = slowest_run_cp_times[drawn_cp_array[i].cp_id] + PB_BOTTOM_MULT;
             float ct = drawn_cp_array[i].cp_time;
             y_loc = (st - ct) / (st - ft);
 
@@ -219,8 +211,6 @@ class PbGrapherWindow {
         nvg::StrokeWidth(LineWidth);
         nvg::Stroke();
         nvg::ClosePath();
-
-
     }
 
     void doCpLogRefresh(string map_uuid) {
@@ -233,7 +223,7 @@ class PbGrapherWindow {
             for(int i = 0; i < cp_log_array[0].Length; i++) {
                 float _min = 10 ** 5;
                 float _max = 0; 
-                for (int j = 0; j < cp_log_array.Length; j++) {
+                for (int j = 0; j < Math::Min(NUM_LINE_PAST_GHOSTS, cp_log_array.Length); j++) {
                     if (cp_log_array[j].Length == 0) {
                         continue;
                     }
@@ -261,7 +251,7 @@ class PbGrapherWindow {
     void DrawSpeedLine(float vel_t, vec4 color) {
         nvg::BeginPath();
         nvg::MoveTo(TransformToViewBounds(ClampVec2(vec2(valueRange.x, vel_t), valueRange), min, max));
-        nvg::LineTo(TransformToViewBounds(ClampVec2(vec2((valueRange.x) + (valueRange.y - valueRange.x) / SCALE, vel_t), valueRange), min, max));
+        nvg::LineTo(TransformToViewBounds(ClampVec2(vec2((valueRange.x) + (valueRange.y - valueRange.x), vel_t), valueRange), min, max));
         nvg::StrokeColor(color);
         nvg::StrokeWidth(LineWidth);
         nvg::Stroke();

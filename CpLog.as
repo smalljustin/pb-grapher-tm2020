@@ -13,6 +13,11 @@ class CpLog
 		run_id = _run_id;
 		cp_id = _cp_id;
 		cp_time = _cp_time;
+
+		if (cp_time < 0) {
+			log("Warning: Provided cp_time is below zero. Taking the absolute value.");
+			cp_time = Math::Abs(cp_time);
+		}
 	}
 
 	CpLog(SQLite::Statement@ statement) {

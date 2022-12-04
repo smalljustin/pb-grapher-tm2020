@@ -11,43 +11,25 @@ void log(const string & in name,
 
 
 class GraphHud {
-    PbGrapherWindow pbGrapherWindow();
-    int getEngineRpm() {
-        CSmArenaClient @ playground = cast < CSmArenaClient > (GetApp().CurrentPlayground);
-        if (playground!is null) {
-            if (playground.GameTerminals.Length > 0) {
-                CGameTerminal @ terminal = cast < CGameTerminal > (playground.GameTerminals[0]);
-                CSmPlayer @ player = cast < CSmPlayer > (terminal.GUIPlayer);
-                if (player!is null) {
-                    CSmScriptPlayer @ script_player = cast < CSmScriptPlayer > (player.ScriptAPI);
-                    if (script_player!is null) {
-                        return script_player.EngineRpm;
-                    }
-                }
-            }
-        }
-        return -1;
-    }
+    ByCheckpointLineGraph byCheckpointLineGraph();
+    AllRunsScatterPlot allRunsScatterPlot();
 
     void update() {
-        pbGrapherWindow.Update();
+        if (VIEW_BY_CHECKPOINT) {
+            byCheckpointLineGraph.Update();
+        } else {
+            allRunsScatterPlot.Update();
+        }
     }
-
 
     void OnSettingsChanged() {
-        if (override_center_graph) {
-            graph_x_offset = (Draw::GetWidth()) / 2 - (graph_width / 2);
-        }
-
-        pbGrapherWindow.UpdateSettings();
         m_size = vec2(graph_width, graph_height);
-        if (SYNC_TARMAC_GENERAL_SLIP) {
-            GDP_SLIP_BOUND = TARMAC_SLIP_BOUND;
+        if (VIEW_BY_CHECKPOINT) {
+            byCheckpointLineGraph.UpdateSettings();
+        } else {
+            allRunsScatterPlot.UpdateSettings();
         }
     }
-
-
-
 
     void Render() {
         nvg::BeginPath();
@@ -59,6 +41,10 @@ class GraphHud {
         nvg::StrokeWidth(BorderWidth);
         nvg::Stroke();
 
-        pbGrapherWindow.Render(m_size, LineWidth);
+        if (VIEW_BY_CHECKPOINT) {
+            byCheckpointLineGraph.Render(m_size, LineWidth);
+        } else {
+            allRunsScatterPlot.Render(m_size, LineWidth);
+        }
     }
 }

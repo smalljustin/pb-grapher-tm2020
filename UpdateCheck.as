@@ -20,9 +20,6 @@ string GetLatestVersion() {
 }
 
 void CheckForUpdatesOnLoad() {
-    if (DISABLE_UPDATE_WARNING_FLAG) {
-        return;
-    }
 #if DEV
     return;
 #endif

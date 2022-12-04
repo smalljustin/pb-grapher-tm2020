@@ -23,26 +23,35 @@ string getMapUid() {
   return "";
 }
 
+void RenderMenu() {
+  if (UI::BeginMenu(Icons::Cog + " PB Grapher")) {
+    if (UI::MenuItem("Reset map data")) {
+      databasefunctions.resetMapData(getMapUid());
+      graphHud.OnSettingsChanged();
+    }
+    if (UI::MenuItem("Switch View")) {
+      VIEW_BY_CHECKPOINT = !VIEW_BY_CHECKPOINT;
+    }
+    UI::EndMenu();
+  }
+}
+
+
 void Render() {
   if (graphHud!is null) {
     auto app = GetApp();
-    if (Setting_General_HideWhenNotPlaying) {
-      if (app.CurrentPlayground!is null && (app.CurrentPlayground.UIConfigs.Length > 0)) {
-        if (app.CurrentPlayground.UIConfigs[0].UISequence == CGamePlaygroundUIConfig::EUISequence::Intro) {
-          return;
-        }
+    if (app.CurrentPlayground!is null && (app.CurrentPlayground.UIConfigs.Length > 0)) {
+      if (app.CurrentPlayground.UIConfigs[0].UISequence == CGamePlaygroundUIConfig::EUISequence::Intro) {
+        return;
       }
     }
-    if (getMapUid() != "")
+    if (getMapUid() != "" && UI::IsGameUIVisible())
       graphHud.Render();
   }
 }
 
 void OnSettingsChanged() {
   graphHud.OnSettingsChanged();
-  if (UseCurrentlyViewedPlayer) {
-    player_index = 0;
-  }
 }
 
 void Main() {
