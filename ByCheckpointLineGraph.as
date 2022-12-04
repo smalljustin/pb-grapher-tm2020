@@ -213,7 +213,7 @@ class ByCheckpointLineGraph
         nvg::ClosePath();
     }
 
-    void doCpLogRefresh(string map_uuid) {
+    void doCpLogRefresh(const string map_uuid) {
         active_map_uuid = map_uuid;
         current_run_id = databasefunctions.getMaxPreviousRunId(map_uuid) + 1;
         cp_log_array = databasefunctions.getCpLogsForMap(map_uuid);

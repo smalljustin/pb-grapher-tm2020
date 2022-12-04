@@ -57,5 +57,4 @@ void OnSettingsChanged() {
 void Main() {
   @graphHud = GraphHud();
   @databasefunctions = DatabaseFunctions();
-  startnew(CheckForUpdatesOnLoad);
 }
