@@ -13,9 +13,9 @@ void Update(float dt) {
 
 string getMapUid() {
   auto app = cast < CTrackMania > (GetApp());
-  if (app != null) {
-    if (app.RootMap != null) {
-      if (app.RootMap.MapInfo != null) {
+  if (@app != null) {
+    if (@app.RootMap != null) {
+      if (@app.RootMap.MapInfo != null) {
         return app.RootMap.MapInfo.MapUid;
       }
     }

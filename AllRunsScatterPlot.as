@@ -279,10 +279,10 @@ class AllRunsScatterPlot
         }
     }
 
-    void doCpLogRefresh(string map_uuid) {
-        active_map_uuid = map_uuid;
-        current_run_id = databasefunctions.getMaxPreviousRunId(map_uuid) + 1;
-        cp_log_array = databasefunctions.getCpLogsForMap(map_uuid);
+    void doCpLogRefresh(string _map_uuid) {
+        active_map_uuid = _map_uuid;
+        current_run_id = databasefunctions.getMaxPreviousRunId(_map_uuid) + 1;
+        cp_log_array = databasefunctions.getCpLogsForMap(_map_uuid);
 
         if (cp_log_array.Length > 0 && cp_log_array[0].Length > 0) {
             updateFastestRun(cp_log_array[0][cp_log_array[0].Length - 1]);
