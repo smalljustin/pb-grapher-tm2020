@@ -37,7 +37,10 @@ class ByCheckpointLineGraph
 
         vec4 active_color = POINT_FADE_COLOR;
 
-        for (int i = 0; i < Math::Min(cp_log_array.Length, NUM_LINE_PAST_GHOSTS); i++) {
+        if (cp_log_array.Length >= 1) {
+            renderCpLogArray(cp_log_array[0], PB_COLOR);
+        }
+        for (int i = 1; i < Math::Min(cp_log_array.Length, NUM_LINE_PAST_GHOSTS); i++) {
             renderCpLogArray(cp_log_array[i], active_color);
             active_color *= (RUN_FALLOFF_RATIO ** 3);
         }

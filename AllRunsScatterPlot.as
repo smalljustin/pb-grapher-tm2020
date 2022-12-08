@@ -12,6 +12,8 @@ class AllRunsScatterPlot
     int current_cp_id;
     int current_cp_idx;
     int current_lap = 1;
+
+    float standard_deviation = 0;
     
     bool loaded = false;
 
@@ -65,7 +67,12 @@ class AllRunsScatterPlot
         max = vec2(parentSize.x - _padding, _padding);
 
         vec4 active_color = POINT_FADE_COLOR;
-        for (int i = 0; i < cp_log_array.Length; i++) {
+
+        if (cp_log_array.Length >= 1) {
+            renderRunHistoryScatter(cp_log_array[0], PB_COLOR);
+        } 
+    
+        for (int i = 1; i < cp_log_array.Length; i++) {
             renderRunHistoryScatter(cp_log_array[i], active_color);
         }
         renderMedals();
@@ -212,7 +219,7 @@ class AllRunsScatterPlot
         }
         min_run_id = Math::Max(min_run_id, max_run_id - NUM_SCATTER_PAST_GHOSTS);
 
-        valueRange = vec4(min_run_id - 1, max_run_id + 1, Math::Max(fastest_run.cp_time + PB_BOTTOM_MULT * 1000, 0), fastest_run.cp_time  + PB_TOP_MULT * 1000);
+        valueRange = vec4(min_run_id - 1, max_run_id + 1, fastest_run.cp_time - standard_deviation, fastest_run.cp_time + standard_deviation * 4);
     }
 
     void renderRunHistoryScatter(array<CpLog> drawn_cp_array, vec4 color) {
@@ -231,6 +238,8 @@ class AllRunsScatterPlot
         if (y_loc > valueRange.w) {
             return;
         }
+         
+
         
         vec4 current_color = color;
 
@@ -291,6 +300,8 @@ class AllRunsScatterPlot
             ACTIVE_NUM_CPS = 0;
             MAX_MAP_TIME = 100 * 100;
         }
+        standard_deviation = getStandardDeviation(cp_log_array, 10);
+        log("Standard deviation: " + tostring(standard_deviation));
         reloadValueRange();
     }
 

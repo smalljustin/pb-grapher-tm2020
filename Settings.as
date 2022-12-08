@@ -80,3 +80,6 @@ float POINT_RADIUS = 2;
 
 [Setting category="Display" name="Point fade color" color]
 vec4 POINT_FADE_COLOR = vec4(1, 1, 1, 1);
+
+[Setting category="Display" name="PB Color" color]
+vec4 PB_COLOR = vec4(0.0, 0.9411764705882353, 0.9764705882352941, 1);
