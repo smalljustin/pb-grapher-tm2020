@@ -1,6 +1,6 @@
 int DEFAULT = 1; 
 
-float getAverage(array<float> values) {
+float __getAverage(array<float> values) {
     if (values.Length == 0) {
         return 0;
     }
@@ -11,13 +11,25 @@ float getAverage(array<float> values) {
     return sum / values.Length;
 }
 
+float getAverage(array<array<CpLog>> cpLogArrayArray) {
+    if (cpLogArrayArray.Length == 0) {
+        return DEFAULT;
+    }
+
+    array<float> valueArray();
+    for (int i = 0; i < cpLogArrayArray.Length; i++) {
+        valueArray.InsertLast(cpLogArrayArray[i][cpLogArrayArray[i].Length - 1].cp_time);
+    }
+    return __getAverage(valueArray);
+}
+
 float ___getStandardDeviation(array<float> values) {
     if (values.Length == 0) {
         // idk bro this will make rendering math easier
         return DEFAULT;
     }
 
-    float avg = getAverage(values);
+    float avg = __getAverage(values);
     float rollingVariance = 0;
 
     for (int i = 0; i < values.Length; i++) {
@@ -61,6 +73,25 @@ float getStandardDeviation(array<array<CpLog>> cpLogArrayArray, int numLast) {
         runsForStandardDeviation.InsertLast(sortedArr[i]);
     }
     return _getStandardDeviation(sortedArr);
+}
+
+RegressionUtil::Line solveRegressionForRecentPointsWithinStandardDeviation(array<array<CpLog>> cpLogArrayArray, int numLast, float numStandardDeviation) {
+    float standard_deviation = getStandardDeviation(cpLogArrayArray, numLast);
+    float average = getAverage(cpLogArrayArray);
+
+    array<array<CpLog>> sortedArr = insertionSort(cpLogArrayArray);
+    array<array<CpLog>> sortedArrWithinStandardDeviation();
+
+    int i = 0; 
+    while (i < sortedArr.Length && sortedArrWithinStandardDeviation.Length < numLast) {
+        float runTime = sortedArr[i][sortedArr[i].Length - 1].cp_time;
+        if (Math::Abs(runTime - average) < standard_deviation * numStandardDeviation) {
+            sortedArrWithinStandardDeviation.InsertLast(sortedArr[i]);
+        }
+        i += 1;
+    }
+    return RegressionUtil::solve(sortedArrWithinStandardDeviation);
+    
 }
 
 array<array<CpLog>> insertionSort(array<array<CpLog>> cpLogArrayArray)

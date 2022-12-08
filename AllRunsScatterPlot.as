@@ -14,6 +14,7 @@ class AllRunsScatterPlot
     int current_lap = 1;
 
     float standard_deviation = 0;
+    RegressionUtil::Line line;
     
     bool loaded = false;
 
@@ -76,6 +77,8 @@ class AllRunsScatterPlot
             renderRunHistoryScatter(cp_log_array[i], active_color);
         }
         renderMedals();
+
+        renderLine(PB_COLOR);
     }
 
     bool isIdxFinish(int idx) {
@@ -261,6 +264,24 @@ class AllRunsScatterPlot
         nvg::ClosePath();
     }
 
+    void renderLine(vec4 color) {
+
+        float start_x_loc = valueRange.x;
+        float start_y_loc = line.solve(start_x_loc);
+
+        float end_x_loc = valueRange.w;
+        float end_y_loc = line.solve(end_x_loc);
+
+        nvg::BeginPath();
+        nvg::MoveTo(TransformToViewBounds(ClampVec2(vec2(start_x_loc,start_y_loc), valueRange), min, max));
+        nvg::LineTo(TransformToViewBounds(ClampVec2(vec2(end_x_loc, end_y_loc), valueRange), min, max));
+        nvg::StrokeColor(color);
+        nvg::StrokeWidth(LineWidth);
+        nvg::Stroke();
+        nvg::ClosePath();
+
+    }
+
     void renderMedals() {
         if (DRAW_AUTHOR) {
             renderMedal(getAuthor(), AUTHOR_COLOR);
@@ -300,8 +321,13 @@ class AllRunsScatterPlot
             ACTIVE_NUM_CPS = 0;
             MAX_MAP_TIME = 100 * 100;
         }
-        standard_deviation = getStandardDeviation(cp_log_array, 10);
+        standard_deviation = getStandardDeviation(cp_log_array, 20);
         log("Standard deviation: " + tostring(standard_deviation));
+        line = solveRegressionForRecentPointsWithinStandardDeviation(
+            cp_log_array, 50, 0.7
+        );
+
+        log(tostring(line.b) + "\t" + tostring(line.m));
         reloadValueRange();
     }
 
