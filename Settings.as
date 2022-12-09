@@ -103,5 +103,5 @@ vec4 BRONZE_COLOR = vec4(0.5490196078431373, 0.3529411764705882, 0.2039215686274
 [Setting category="General" name="View best runs by checkpoint"]
 bool VIEW_BY_CHECKPOINT = false;
 
-[Setting category="General" name="Standard Deviation Cutoff for Slow Runs" drag min=1.1 max=3]
+[Setting category="General" name="Cutoff Multiplier for Slow Runs" drag min=1.1 max=3]
 float SLOW_RUN_CUTOFF = 2;
