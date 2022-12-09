@@ -63,32 +63,6 @@ class AllRunsScatterPlot
         return GetApp().RootMap.TMObjective_IsLapRace;
     }
 
-    void Render(vec2 parentSize, float LineWidth) {
-        if (!g_visible) {
-            return;
-        }
-        if (cp_log_array.Length == 0) {
-            return;
-        }
-        float _padding = padding;
-        min = vec2(_padding, parentSize.y - _padding);
-        max = vec2(parentSize.x - _padding, _padding);
-
-        vec4 active_color = POINT_FADE_COLOR;
-
-        if (cp_log_array.Length >= 1) {
-            renderRunHistoryScatter(cp_log_array[0], PB_COLOR);
-        } 
-    
-        for (int i = 1; i < cp_log_array.Length; i++) {
-            renderRunHistoryScatter(cp_log_array[i], active_color);
-        }
-
-        renderMedals();
-        renderCustomInputMenu();
-
-        renderRightSideScatter(fastest_run, PB_COLOR);
-    }
 
     bool isIdxFinish(int idx) {
         return getPlayground().Arena.MapLandmarks[idx].Waypoint.IsFinish;
@@ -134,6 +108,33 @@ class AllRunsScatterPlot
 
             UI::End();
         }
+    }
+    
+    void Render(vec2 parentSize, float LineWidth) {
+        if (!g_visible) {
+            return;
+        }
+        if (cp_log_array.Length == 0) {
+            return;
+        }
+        float _padding = padding;
+        min = vec2(_padding, parentSize.y - _padding);
+        max = vec2(parentSize.x - _padding, _padding);
+
+        vec4 active_color = POINT_FADE_COLOR;
+
+        if (cp_log_array.Length >= 1) {
+            renderRunHistoryScatter(cp_log_array[0], PB_COLOR);
+        } 
+    
+        for (int i = 1; i < cp_log_array.Length; i++) {
+            renderRunHistoryScatter(cp_log_array[i], active_color);
+        }
+
+        renderMedals();
+        renderCustomInputMenu();
+
+        renderRightSideScatter(fastest_run, PB_COLOR);
     }
 
     void doCustomTimeTargetRefresh() {
@@ -290,12 +291,17 @@ class AllRunsScatterPlot
         if (run_cplog.cp_log_id != fastest_run.cp_log_id) {
             current_color *= RUN_FALLOFF_RATIO ** (1 + (run_cplog.cp_time - fastest_run.cp_time) / 100);
         }
+
+        vec2 max_with_width = max;
+        if (DRAW_RIGHT_SIDE_SCATTER) {
+            max_with_width.x -= graph_width / RIGHT_SCATTER_BAR_WIDTH;
+        }
         
         current_color.w = 1;
 
         nvg::BeginPath();
         nvg::Circle(
-            TransformToViewBounds(ClampVec2(vec2(x_loc, y_loc), valueRange), min, max),
+            TransformToViewBounds(ClampVec2(vec2(x_loc, y_loc), valueRange), min, max_with_width),
             POINT_RADIUS
         );
         nvg::StrokeColor(current_color);
@@ -399,7 +405,6 @@ class AllRunsScatterPlot
         doCpLogRefresh(map_uuid);
         doCustomTimeTargetRefresh();
         input_target_time = getAuthor() / 1000;
-
     }
 
 

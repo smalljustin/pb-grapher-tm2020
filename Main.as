@@ -36,6 +36,7 @@ void RenderMenu() {
     }
     if (UI::MenuItem("Manage Custom Time Targets")) {
       showTimeInputWindow = !showTimeInputWindow;
+      log(tostring(showTimeInputWindow));
     }
     UI::EndMenu();
   }
@@ -43,8 +44,6 @@ void RenderMenu() {
 
 
 void Render() {
-
-
   if (graphHud!is null) {
     auto app = GetApp();
     if (app.CurrentPlayground!is null && (app.CurrentPlayground.UIConfigs.Length > 0)) {

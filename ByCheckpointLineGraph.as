@@ -19,13 +19,15 @@ class ByCheckpointLineGraph
     array<float> fastest_run_cp_times;
     array<float> slowest_run_cp_times;
 
+    bool RUN_IS_RESPAWN;
+
+    float input_target_time;
+
     array<array<CpLog>> cp_log_array(0, array<CpLog>(0));
     array<CpLog> active_run_buffer(0, CpLog());
 
     ByCheckpointLineGraph() {
     }
-
-
 
     void Render(vec2 parentSize, float LineWidth) {
         if (!g_visible) {
@@ -47,6 +49,7 @@ class ByCheckpointLineGraph
             renderCpLogArray(cp_log_array[i], active_color);
             active_color *= (RUN_FALLOFF_RATIO ** 3);
         }
+        renderCustomInputMenu();
     }
 
     void Update() {
@@ -56,6 +59,22 @@ class ByCheckpointLineGraph
         }
         handleRunStart();
         handleWatchCheckpoint();
+        renderCustomInputMenu();
+    }
+
+    void renderCustomInputMenu() {
+        if (showTimeInputWindow) {
+            UI::Begin("Enter a custom time target", UI::WindowFlags::AlwaysAutoResize);
+                input_target_time = UI::InputFloat("Target time", input_target_time, 0.005);
+                if (UI::Button("Save", vec2(200, 30))) {
+                    databasefunctions.addCustomTimeTarget(active_map_uuid, input_target_time);
+                };
+                if (UI::Button("Remove All", vec2(200, 30))) {
+                    databasefunctions.removeAllCustomTimeTargets(active_map_uuid);
+                };
+
+            UI::End();
+        }
     }
 
     bool isIdxFinish(int idx) {
@@ -80,6 +99,19 @@ class ByCheckpointLineGraph
     bool isMultiLap() {
         return GetApp().RootMap.TMObjective_IsLapRace;
     }
+    
+    float getAuthor() {
+        return GetApp().RootMap.TMObjective_AuthorTime;
+    }
+
+    void testPlayerRespawned() {
+        if (RUN_IS_RESPAWN) {
+            return;
+        }
+        auto player = getPlayer();
+        auto scriptPlayer = player is null ? null : cast<CSmScriptPlayer>(player.ScriptAPI);
+        RUN_IS_RESPAWN = scriptPlayer.Score.NbRespawnsRequested > 0;
+    }
 
     /**
      * handleRunStart: To be called at the beginning of each frame. 
@@ -96,11 +128,13 @@ class ByCheckpointLineGraph
             // Don't save this run.
             current_cp_id = getCurrentCheckpoint();
             active_run_buffer.RemoveRange(0, active_run_buffer.Length);
+            RUN_IS_RESPAWN = false;
             return false;
         }
     }
 
     void handleWatchCheckpoint() {
+        testPlayerRespawned();
         if (getCurrentCheckpoint() == current_cp_id) {
             return;
         } else {
@@ -125,7 +159,9 @@ class ByCheckpointLineGraph
             race_completed = true;
         }
         if (race_completed) {
-            databasefunctions.persistBuffer(active_run_buffer);
+            if (!RUN_IS_RESPAWN || SAVE_RESPAWN_RUNS) {
+                databasefunctions.persistBuffer(active_run_buffer);
+            }
             current_run_id += 1;
             doCpLogRefresh(active_map_uuid);
             race_completed = false;
@@ -251,6 +287,7 @@ class ByCheckpointLineGraph
             return;
         }
         doCpLogRefresh(map_uuid);
+        input_target_time = getAuthor() / 1000;
     }
 
     void DrawSpeedLine(float vel_t, vec4 color) {

@@ -5,10 +5,28 @@ float getAverage(array<float> values) {
         return 0;
     }
     float sum = 0;
+    float min = getMin(values);
+    int count = 0;
     for (int i = 0; i < values.Length; i++) {
-        sum += values[i];
+        if (values[i] < SLOW_RUN_CUTOFF * min) {
+            sum += values[i];
+            count += 1;
+        }
     }
-    return sum / values.Length;
+    return sum / count;
+}
+
+float getMin(array<float> values) {
+    if (values.Length == 0) {
+        return 0;
+    }
+    float min = values[0];
+    for (int i = 1; i < values.Length; i++) {
+        if (values[i] < min) {
+            min = values[i];
+        }
+    }
+    return min;
 }
 
 float __getStandardDeviation(array<float> values) {
@@ -18,12 +36,17 @@ float __getStandardDeviation(array<float> values) {
     }
 
     float avg = getAverage(values);
+    float min = getMin(values);
     float rollingVariance = 0;
+    int count = 0;
 
     for (int i = 0; i < values.Length; i++) {
-        rollingVariance += (values[i] - avg) ** 2;
+        if (values[i] < SLOW_RUN_CUTOFF * min) {
+            rollingVariance += (values[i] - avg) ** 2;
+            count += 1;
+        }
     }
-    rollingVariance /= values.Length;
+    rollingVariance /= count;
     return rollingVariance ** 0.5;
 }
 
