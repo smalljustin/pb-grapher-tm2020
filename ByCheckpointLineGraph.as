@@ -28,6 +28,9 @@ class ByCheckpointLineGraph
 
 
     void Render(vec2 parentSize, float LineWidth) {
+        if (!g_visible) {
+            return;
+        }
         if (cp_log_array.Length == 0) {
             return;
         }
@@ -110,7 +113,6 @@ class ByCheckpointLineGraph
 
         bool race_completed = false;
         if (isMultiLap()) {
-            log("Current lap: " + tostring(current_lap));
             if (isIdxFinish(current_cp_id)) {
                 if (current_lap == getNumLaps()) {
                     race_completed = true;
@@ -203,8 +205,8 @@ class ByCheckpointLineGraph
         for (int i = 0; i < drawn_cp_array.Length; i++) {
             x_loc = fastest_run_cp_times[drawn_cp_array[i].cp_id] / fastest_run.cp_time;
 
-            float ft = fastest_run_cp_times[drawn_cp_array[i].cp_id] + PB_TOP_MULT;
-            float st = slowest_run_cp_times[drawn_cp_array[i].cp_id] + PB_BOTTOM_MULT;
+            float ft = fastest_run_cp_times[drawn_cp_array[i].cp_id] + UPPER_STDEV_MULT;
+            float st = slowest_run_cp_times[drawn_cp_array[i].cp_id] + LOWER_STDEV_MULT;
             float ct = drawn_cp_array[i].cp_time;
             y_loc = (st - ct) / (st - ft);
 

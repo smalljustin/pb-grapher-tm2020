@@ -17,12 +17,17 @@ class AllRunsScatterPlot
     
     bool loaded = false;
 
+    float input_target_time = 30;
+
     CpLog fastest_run;
     CpLog slowest_run;
 
     array<array<CpLog>> cp_log_array(0, array<CpLog>(0));
     array<CpLog> active_run_buffer(0, CpLog());
 
+    array<CustomTimeTarget> custom_time_targets();
+
+    bool RUN_IS_RESPAWN;
 
     AllRunsScatterPlot() {
     }
@@ -59,6 +64,9 @@ class AllRunsScatterPlot
     }
 
     void Render(vec2 parentSize, float LineWidth) {
+        if (!g_visible) {
+            return;
+        }
         if (cp_log_array.Length == 0) {
             return;
         }
@@ -75,7 +83,11 @@ class AllRunsScatterPlot
         for (int i = 1; i < cp_log_array.Length; i++) {
             renderRunHistoryScatter(cp_log_array[i], active_color);
         }
+
         renderMedals();
+        renderCustomInputMenu();
+
+        renderRightSideScatter(fastest_run, PB_COLOR);
     }
 
     bool isIdxFinish(int idx) {
@@ -98,6 +110,36 @@ class AllRunsScatterPlot
         return getPlayer().StartTime;
     }
 
+    void testPlayerRespawned() {
+        if (RUN_IS_RESPAWN) {
+            return;
+        }
+        auto player = getPlayer();
+        auto scriptPlayer = player is null ? null : cast<CSmScriptPlayer>(player.ScriptAPI);
+        RUN_IS_RESPAWN = scriptPlayer.Score.NbRespawnsRequested > 0;
+    }
+
+    void renderCustomInputMenu() {
+        if (showTimeInputWindow) {
+            UI::Begin("Enter a custom time target", UI::WindowFlags::AlwaysAutoResize);
+                input_target_time = UI::InputFloat("Target time", input_target_time, 0.005);
+                if (UI::Button("Save", vec2(200, 30))) {
+                    databasefunctions.addCustomTimeTarget(active_map_uuid, input_target_time);
+                    doCustomTimeTargetRefresh();
+                };
+                if (UI::Button("Remove All", vec2(200, 30))) {
+                    databasefunctions.removeAllCustomTimeTargets(active_map_uuid);
+                    doCustomTimeTargetRefresh();
+                };
+
+            UI::End();
+        }
+    }
+
+    void doCustomTimeTargetRefresh() {
+        custom_time_targets = databasefunctions.getCustomTimeTargetsForMap(active_map_uuid);
+    }
+
     /**
      * handleRunStart: To be called at the beginning of each frame. 
      * Returns true if the run is continuing, and false if it has been reset.
@@ -113,11 +155,13 @@ class AllRunsScatterPlot
             // Don't save this run.
             current_cp_id = getCurrentCheckpoint();
             active_run_buffer.RemoveRange(0, active_run_buffer.Length);
+            RUN_IS_RESPAWN = false;
             return false;
         }
     }
 
     void handleWatchCheckpoint() {
+        testPlayerRespawned();
         if (getCurrentCheckpoint() == current_cp_id) {
             return;
         } else {
@@ -130,7 +174,6 @@ class AllRunsScatterPlot
 
         bool race_completed = false;
         if (isMultiLap()) {
-            log("Current lap: " + tostring(current_lap));
             if (isIdxFinish(current_cp_id)) {
                 if (current_lap == getNumLaps()) {
                     race_completed = true;
@@ -143,7 +186,10 @@ class AllRunsScatterPlot
             race_completed = true;
         }
         if (race_completed) {
-            databasefunctions.persistBuffer(active_run_buffer);
+            if (!RUN_IS_RESPAWN || SAVE_RESPAWN_RUNS) {
+                databasefunctions.persistBuffer(active_run_buffer);
+            }
+
             current_run_id += 1;
             doCpLogRefresh(active_map_uuid);
             race_completed = false;
@@ -219,7 +265,7 @@ class AllRunsScatterPlot
         }
         min_run_id = Math::Max(min_run_id, max_run_id - NUM_SCATTER_PAST_GHOSTS);
 
-        valueRange = vec4(min_run_id - 1, max_run_id + 1, fastest_run.cp_time - standard_deviation, fastest_run.cp_time + standard_deviation * 4);
+        valueRange = vec4(min_run_id - 1, max_run_id + 1, fastest_run.cp_time - LOWER_STDEV_MULT * standard_deviation, fastest_run.cp_time + standard_deviation * UPPER_STDEV_MULT);
     }
 
     void renderRunHistoryScatter(array<CpLog> drawn_cp_array, vec4 color) {
@@ -239,8 +285,6 @@ class AllRunsScatterPlot
             return;
         }
          
-
-        
         vec4 current_color = color;
 
         if (run_cplog.cp_log_id != fastest_run.cp_log_id) {
@@ -249,17 +293,56 @@ class AllRunsScatterPlot
         
         current_color.w = 1;
 
-
         nvg::BeginPath();
         nvg::Circle(
             TransformToViewBounds(ClampVec2(vec2(x_loc, y_loc), valueRange), min, max),
             POINT_RADIUS
         );
         nvg::StrokeColor(current_color);
-        nvg::StrokeWidth(LineWidth);
+        nvg::StrokeWidth(POINT_RADIUS ** 2);
         nvg::Stroke();
         nvg::ClosePath();
+
+        renderRightSideScatter(run_cplog, POINT_FADE_COLOR);
     }
+
+    void renderRightSideScatter(CpLog run_cplog, vec4 color) {
+        if (!DRAW_RIGHT_SIDE_SCATTER) {
+            return;
+        }
+        float x_loc, y_loc; 
+
+        x_loc = valueRange.y;
+        y_loc = run_cplog.cp_time;
+
+        if (y_loc > valueRange.w) {
+            return;
+        }
+        vec4 current_color = color;
+        
+        if (run_cplog.run_id != fastest_run.run_id) {
+            current_color.w = RIGHT_SIDE_SCATTER_POINT_OPACITY;
+        } else {
+            current_color.w = (1 + RIGHT_SIDE_SCATTER_POINT_OPACITY) / 2;
+        }
+
+        float width = graph_width / RIGHT_SCATTER_BAR_WIDTH;
+        float height = graph_height / RIGHT_SCATTER_BAR_HEIGHT;
+
+        vec2 pos = TransformToViewBounds(ClampVec2(vec2(x_loc, y_loc), valueRange), min, max);
+        pos.x -= width;
+        pos.y -= height;
+
+        vec2 size = vec2(width, height);
+
+
+        nvg::BeginPath();
+        nvg::RoundedRect(pos, size, RIGHT_SIDE_BORDER_RADIUS);
+        nvg::FillColor(current_color);
+        nvg::Fill();
+        nvg::ClosePath();
+    }
+
 
     void renderMedals() {
         if (DRAW_AUTHOR) {
@@ -273,6 +356,10 @@ class AllRunsScatterPlot
         }
         if (DRAW_BRONZE) {
             renderMedal(getBronze(), BRONZE_COLOR);
+        }
+
+        for (int i = 0; i < custom_time_targets.Length; i++) {
+            renderMedal(custom_time_targets[i].target_time, CUSTOM_TARGET_COLOR);
         }
     }
 
@@ -300,8 +387,7 @@ class AllRunsScatterPlot
             ACTIVE_NUM_CPS = 0;
             MAX_MAP_TIME = 100 * 100;
         }
-        standard_deviation = getStandardDeviation(cp_log_array, 10);
-        log("Standard deviation: " + tostring(standard_deviation));
+        standard_deviation = getStandardDeviation(cp_log_array, NUM_SCATTER_PAST_GHOSTS);
         reloadValueRange();
     }
 
@@ -311,7 +397,12 @@ class AllRunsScatterPlot
             return;
         }
         doCpLogRefresh(map_uuid);
+        doCustomTimeTargetRefresh();
+        input_target_time = getAuthor() / 1000;
+
     }
+
+
 
     void DrawSpeedLine(float vel_t, vec4 color) {
         nvg::BeginPath();
@@ -322,6 +413,8 @@ class AllRunsScatterPlot
         nvg::Stroke();
         nvg::ClosePath();
     }
+
+    
 
     vec2 ClampVec2(const vec2 & in val,
         const vec4 & in bounds) {
@@ -335,4 +428,5 @@ class AllRunsScatterPlot
         auto yv = Math::InvLerp(valueRange.z, valueRange.w, point.y);
         return vec2(graph_x_offset + Math::Lerp(min.x, max.x, xv), graph_y_offset + Math::Lerp(min.y, max.y, yv));
     }
+
 }

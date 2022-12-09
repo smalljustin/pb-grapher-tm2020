@@ -11,7 +11,7 @@ float getAverage(array<float> values) {
     return sum / values.Length;
 }
 
-float ___getStandardDeviation(array<float> values) {
+float __getStandardDeviation(array<float> values) {
     if (values.Length == 0) {
         // idk bro this will make rendering math easier
         return DEFAULT;
@@ -21,21 +21,10 @@ float ___getStandardDeviation(array<float> values) {
     float rollingVariance = 0;
 
     for (int i = 0; i < values.Length; i++) {
-        rollingVariance += Math::Abs(values[i] - avg);
+        rollingVariance += (values[i] - avg) ** 2;
     }
-
+    rollingVariance /= values.Length;
     return rollingVariance ** 0.5;
-}
-
-float __getStandardDeviation(array<CpLog> cpLogArray) {
-    if (cpLogArray.Length == 0) {
-        return DEFAULT;
-    }
-    array<float> runTimes();
-    for (int i = 0; i < cpLogArray.Length; i++) {
-        runTimes.InsertLast(cpLogArray[i].cp_time);
-    }
-    return ___getStandardDeviation(runTimes);
 }
 
 float _getStandardDeviation(array<array<CpLog>> cpLogArrayArray) {
@@ -43,11 +32,11 @@ float _getStandardDeviation(array<array<CpLog>> cpLogArrayArray) {
         return DEFAULT;
     }
 
-    array<CpLog> cpLogArray();
+    array<float> runTimes();
     for (int i = 0; i < cpLogArrayArray.Length; i++) {
-        cpLogArray.InsertLast(cpLogArrayArray[i][cpLogArrayArray[i].Length - 1]);
+        runTimes.InsertLast(cpLogArrayArray[i][cpLogArrayArray[i].Length - 1].cp_time);
     }
-    return __getStandardDeviation(cpLogArray);
+    return __getStandardDeviation(runTimes);
 }
 
 float getStandardDeviation(array<array<CpLog>> cpLogArrayArray, int numLast) {
@@ -60,7 +49,7 @@ float getStandardDeviation(array<array<CpLog>> cpLogArrayArray, int numLast) {
     for (int i = 0; i < numLast; i++) {
         runsForStandardDeviation.InsertLast(sortedArr[i]);
     }
-    return _getStandardDeviation(sortedArr);
+    return _getStandardDeviation(runsForStandardDeviation);
 }
 
 array<array<CpLog>> insertionSort(array<array<CpLog>> cpLogArrayArray)
@@ -89,3 +78,4 @@ array<array<CpLog>> insertionSort(array<array<CpLog>> cpLogArrayArray)
 
     return sortedArr;
 }
+

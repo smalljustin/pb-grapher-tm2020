@@ -16,6 +16,7 @@ class DatabaseFunctions {
     """;
     DatabaseFunctions() {
         database.Execute("CREATE TABLE IF NOT EXISTS cp_log (cp_log_id INTEGER PRIMARY KEY AUTOINCREMENT, map_uuid VARCHAR, run_id INTEGER, cp_id INTEGER, cp_time FLOAT, UNIQUE(map_uuid, run_id, cp_id))");
+        database.Execute("CREATE TABLE IF NOT EXISTS custom_time_targets (custom_target_id INTEGER PRIMARY KEY AUTOINCREMENT, map_uuid VARCHAR, target_time FLOAT)");
     }
     void persistBuffer(array<CpLog> active_run_buffer) {
         string sql = "INSERT INTO cp_log (map_uuid, run_id, cp_id, cp_time) VALUES (?, ?, ?, ?)";
@@ -26,7 +27,6 @@ class DatabaseFunctions {
         }
         
     }
-
     int getMaxPreviousRunId(string _map_uuid) {
         SQLite::Statement@ num_runs_stmt = database.Prepare("SELECT max(run_id) max_id FROM cp_log WHERE map_uuid = ? AND cp_id = 0 GROUP BY map_uuid");
         num_runs_stmt.Bind(1, _map_uuid);
@@ -84,5 +84,39 @@ class DatabaseFunctions {
         return cpLogsForMap;
     }
 
+    void addCustomTimeTarget(string _map_uuid, float target_time) {
+        if (_map_uuid == "") {
+            return;
+        }
+        target_time *= 1000;
+        string addCustomTimeTargetSql = "INSERT INTO custom_time_targets (map_uuid, target_time) VALUES (?, ?)";
+        SQLite::Statement@ statement = database.Prepare(addCustomTimeTargetSql);
+        statement.Bind(1, _map_uuid);
+        statement.Bind(2, target_time);
+        log(statement.GetQueryExpanded());
+        statement.Execute();
+    }
 
+    void removeAllCustomTimeTargets(string _map_uuid) {
+        string deleteCustomTimeTargetSql = "DELETE FROM custom_time_targets WHERE map_uuid = ?";
+        SQLite::Statement@ statement = database.Prepare(deleteCustomTimeTargetSql);
+        statement.Bind(1, _map_uuid);
+        statement.Execute();
+    }
+
+    array<CustomTimeTarget> getCustomTimeTargetsForMap(string _map_uuid) {
+        array<CustomTimeTarget> customTimeTargets();
+        if (_map_uuid == "") {
+            return customTimeTargets;
+        }
+        string getCustomTimeTargetsForMapSql = "SELECT custom_target_id, map_uuid, target_time FROM custom_time_targets WHERE map_uuid = ?";
+        SQLite::Statement@ statement = database.Prepare(getCustomTimeTargetsForMapSql);
+        statement.Bind(1, _map_uuid);
+        while (statement.NextRow()) {
+            CustomTimeTarget custom_target = CustomTimeTarget(statement);
+            customTimeTargets.InsertLast(custom_target);
+        }
+        log("Returning " + customTimeTargets.Length + " custom time targets.");
+        return customTimeTargets;
+    }
 }

@@ -4,8 +4,10 @@ float g_dt = 0;
 float HALF_PI = 1.57079632679;
 string surface_override = "";
 
+bool showTimeInputWindow = false;
 
 vec2 m_size = vec2(graph_width, graph_height);
+
 
 void Update(float dt) {
   graphHud.update();
@@ -32,12 +34,17 @@ void RenderMenu() {
     if (UI::MenuItem("Switch View")) {
       VIEW_BY_CHECKPOINT = !VIEW_BY_CHECKPOINT;
     }
+    if (UI::MenuItem("Manage Custom Time Targets")) {
+      showTimeInputWindow = !showTimeInputWindow;
+    }
     UI::EndMenu();
   }
 }
 
 
 void Render() {
+
+
   if (graphHud!is null) {
     auto app = GetApp();
     if (app.CurrentPlayground!is null && (app.CurrentPlayground.UIConfigs.Length > 0)) {
@@ -57,4 +64,5 @@ void OnSettingsChanged() {
 void Main() {
   @graphHud = GraphHud();
   @databasefunctions = DatabaseFunctions();
+  graphHud.OnSettingsChanged();
 }
