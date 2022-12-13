@@ -279,18 +279,24 @@ class AllRunsScatterPlot
         x_loc = run_cplog.run_id;
         y_loc = run_cplog.cp_time;
 
-        if (x_loc < valueRange.x) {
-            return;
-        }
-        if (y_loc > valueRange.w) {
-            return;
-        }
-         
         vec4 current_color = color;
-
-        if (run_cplog.cp_log_id != fastest_run.cp_log_id) {
-            current_color *= RUN_FALLOFF_RATIO ** (1 + (run_cplog.cp_time - fastest_run.cp_time) / 100);
+        if (x_loc <= valueRange.x) {
+            return;
         }
+        if (y_loc >= valueRange.w) {
+            if (!SHOW_OVERTIME_RUNS) {
+                return;
+            } else {
+                current_color = OVERTIME_RUN_COLOR;
+                current_color *= RUN_FALLOFF_RATIO ** (1 + (run_cplog.cp_time - valueRange.w) / OVERTIME_RUN_FADE_CONSTANT);
+            }
+        } else {
+            if (run_cplog.cp_log_id != fastest_run.cp_log_id) {
+                current_color *= RUN_FALLOFF_RATIO ** (1 + (run_cplog.cp_time - fastest_run.cp_time) / 100);
+            }
+        }
+
+
 
         vec2 max_with_width = max;
         if (DRAW_RIGHT_SIDE_SCATTER) {
@@ -338,6 +344,7 @@ class AllRunsScatterPlot
         vec2 pos = TransformToViewBounds(ClampVec2(vec2(x_loc, y_loc), valueRange), min, max);
         pos.x -= width;
         pos.y -= height;
+        pos.y += (height / 2);
 
         vec2 size = vec2(width, height);
 
