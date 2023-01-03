@@ -155,7 +155,7 @@ class AllRunsScatterPlot
             // If we've reset, we're now at the start checkpoint. 
             // Don't save this run.
             current_cp_id = getCurrentCheckpoint();
-            active_run_buffer.RemoveRange(0, active_run_buffer.Length);
+            active_run_buffer = array<CpLog>();
             RUN_IS_RESPAWN = false;
             return false;
         }
@@ -190,9 +190,10 @@ class AllRunsScatterPlot
             if (!RUN_IS_RESPAWN || SAVE_RESPAWN_RUNS) {
                 databasefunctions.persistBuffer(active_run_buffer);
             }
-
+            cp_log_array.InsertLast(active_run_buffer);
             current_run_id += 1;
-            doCpLogRefresh(active_map_uuid);
+            reloadValueRange();
+            startnew(CoroutineFunc(this.delayedActiveCpLogRefresh));
             race_completed = false;
         }
     }
@@ -386,6 +387,11 @@ class AllRunsScatterPlot
             nvg::Stroke();
             nvg::ClosePath();
         }
+    }
+
+    void delayedActiveCpLogRefresh() {
+        sleep(2000);
+        doCpLogRefresh(active_map_uuid);
     }
 
     void doCpLogRefresh(string _map_uuid) {

@@ -11,24 +11,15 @@ void log(const string & in name,
 
 
 class GraphHud {
-    ByCheckpointLineGraph byCheckpointLineGraph();
     AllRunsScatterPlot allRunsScatterPlot();
 
     void update() {
-        if (VIEW_BY_CHECKPOINT) {
-            byCheckpointLineGraph.Update();
-        } else {
-            allRunsScatterPlot.Update();
-        }
+        allRunsScatterPlot.Update();
     }
 
     void OnSettingsChanged() {
         m_size = vec2(graph_width, graph_height);
-        if (VIEW_BY_CHECKPOINT) {
-            byCheckpointLineGraph.UpdateSettings();
-        } else {
-            allRunsScatterPlot.UpdateSettings();
-        }
+        allRunsScatterPlot.UpdateSettings();
     }
 
     void Render() {
@@ -40,11 +31,6 @@ class GraphHud {
         nvg::StrokeColor(BorderColor);
         nvg::StrokeWidth(BorderWidth);
         nvg::Stroke();
-
-        if (VIEW_BY_CHECKPOINT) {
-            byCheckpointLineGraph.Render(m_size, LineWidth);
-        } else {
-            allRunsScatterPlot.Render(m_size, LineWidth);
-        }
+        allRunsScatterPlot.Render(m_size, LineWidth);
     }
 }

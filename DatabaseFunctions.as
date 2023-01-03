@@ -1,6 +1,9 @@
 class DatabaseFunctions {
     string database_filename = "pb_grapher_store.db";
     SQLite::Database@ database = SQLite::Database(database_filename);
+
+    array<array<CpLog>> pendingCpLogArrayBuffer();
+
     string getCpLogsForMapSql = """
         WITH run_time AS 
         (SELECT map_uuid, run_id, MAX(cp_time) AS run_time
@@ -18,15 +21,28 @@ class DatabaseFunctions {
         database.Execute("CREATE TABLE IF NOT EXISTS cp_log (cp_log_id INTEGER PRIMARY KEY AUTOINCREMENT, map_uuid VARCHAR, run_id INTEGER, cp_id INTEGER, cp_time FLOAT, UNIQUE(map_uuid, run_id, cp_id))");
         database.Execute("CREATE TABLE IF NOT EXISTS custom_time_targets (custom_target_id INTEGER PRIMARY KEY AUTOINCREMENT, map_uuid VARCHAR, target_time FLOAT)");
     }
+
+    void persist() {
+        for (int i = 0; i < pendingCpLogArrayBuffer.Length; i++) {
+            _persistBuffer(pendingCpLogArrayBuffer[i]);
+        }
+    }
+
     void persistBuffer(array<CpLog> active_run_buffer) {
+        pendingCpLogArrayBuffer.InsertLast(active_run_buffer);
+        startnew(CoroutineFunc(this.persist));
+    }
+
+    void _persistBuffer(array<CpLog> active_run_buffer) {
         string sql = "INSERT INTO cp_log (map_uuid, run_id, cp_id, cp_time) VALUES (?, ?, ?, ?)";
+        sleep(250);
         for (int i = 0; i < active_run_buffer.Length; i++) {
             SQLite::Statement@ stmt = database.Prepare(sql);
             active_run_buffer[i].saveToStatement(stmt);
             stmt.Execute();
         }
-        
     }
+
     int getMaxPreviousRunId(string _map_uuid) {
         SQLite::Statement@ num_runs_stmt = database.Prepare("SELECT max(run_id) max_id FROM cp_log WHERE map_uuid = ? AND cp_id = 0 GROUP BY map_uuid");
         num_runs_stmt.Bind(1, _map_uuid);
