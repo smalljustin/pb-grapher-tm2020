@@ -33,9 +33,9 @@ class DatabaseFunctions {
         startnew(CoroutineFunc(this.persist));
     }
 
+
     void _persistBuffer(array<CpLog> active_run_buffer) {
         string sql = "INSERT INTO cp_log (map_uuid, run_id, cp_id, cp_time) VALUES (?, ?, ?, ?)";
-        sleep(250);
         for (int i = 0; i < active_run_buffer.Length; i++) {
             SQLite::Statement@ stmt = database.Prepare(sql);
             active_run_buffer[i].saveToStatement(stmt);

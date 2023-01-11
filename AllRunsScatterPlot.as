@@ -189,11 +189,11 @@ class AllRunsScatterPlot
         if (race_completed) {
             if (!RUN_IS_RESPAWN || SAVE_RESPAWN_RUNS) {
                 databasefunctions.persistBuffer(active_run_buffer);
+                cp_log_array.InsertLast(active_run_buffer);
+                current_run_id += 1;
+                reloadValueRange();
+                startnew(CoroutineFunc(this.delayedActiveCpLogRefresh));
             }
-            cp_log_array.InsertLast(active_run_buffer);
-            current_run_id += 1;
-            reloadValueRange();
-            startnew(CoroutineFunc(this.delayedActiveCpLogRefresh));
             race_completed = false;
         }
     }
@@ -260,6 +260,8 @@ class AllRunsScatterPlot
     void reloadValueRange() {
         int max_run_id = 0;
         int min_run_id = 10 ** 5;
+
+        standard_deviation = getStandardDeviation(cp_log_array, NUM_SCATTER_PAST_GHOSTS);
 
         for (int i = 0; i < cp_log_array.Length; i++) {
             min_run_id = Math::Min(min_run_id, cp_log_array[i][0].run_id);
@@ -406,9 +408,9 @@ class AllRunsScatterPlot
             ACTIVE_NUM_CPS = 0;
             MAX_MAP_TIME = 100 * 100;
         }
-        standard_deviation = getStandardDeviation(cp_log_array, NUM_SCATTER_PAST_GHOSTS);
         reloadValueRange();
     }
+
 
     void handleMapUpdate() {
         string map_uuid = getMapUid();
