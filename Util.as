@@ -8,7 +8,7 @@ float getAverage(array<float> values) {
     float min = getMin(values);
     int count = 0;
     for (int i = 0; i < values.Length; i++) {
-        if (values[i] < SLOW_RUN_CUTOFF * min) {
+        if (values[i] < SLOW_RUN_CUTOFF_SCATTER * min) {
             sum += values[i];
             count += 1;
         }
@@ -45,7 +45,7 @@ float __getStandardDeviation(array<float> @values) {
     int count = 0;
 
     for (int i = 0; i < values.Length; i++) {
-        if (values[i] < SLOW_RUN_CUTOFF * min) {
+        if (values[i] < SLOW_RUN_CUTOFF_SCATTER * min) {
             rollingVariance += (values[i] - avg) ** 2;
             count += 1;
         }

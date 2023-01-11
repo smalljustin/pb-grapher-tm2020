@@ -100,8 +100,11 @@ bool DRAW_BRONZE = true;
 [Setting category="Medals" name="Bronze Line Color" color]
 vec4 BRONZE_COLOR = vec4(0.5490196078431373, 0.3529411764705882, 0.203921568627451, .7);
 
-[Setting category="General" name="Cutoff Multiplier for Slow Runs" drag min=1 max=3]
-float SLOW_RUN_CUTOFF = 1.15;
+[Setting category="General" name="Cutoff Multiplier for Slow Runs - Scatter" drag min=1 max=1.5]
+float SLOW_RUN_CUTOFF_SCATTER = 1.15;
+
+[Setting category="General" name="Cutoff Multiplier for Slow Runs - Histogram" drag min=1 max=1.5]
+float SLOW_RUN_CUTOFF_HIST = 1.15;
 
 [Setting category="General" name="Show over-time runs in graph"]
 bool SHOW_OVERTIME_RUNS = true;
@@ -114,3 +117,9 @@ int OVERTIME_RUN_FADE_CONSTANT = 50;
 
 [Setting category="General" name="Max over-time run constant" drag min=1.1 max=10]
 float OVERTIME_MAX_CONSTANT = 2;
+
+[Setting category="General" name="Histogram View"]
+bool HISTOGRAM_VIEW = false;
+
+[Setting category="General" name="Histogram precision value" drag min=0.001 max=0.1]
+float HIST_PRECISION_VALUE = 0.001;

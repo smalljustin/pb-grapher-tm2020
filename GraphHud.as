@@ -23,7 +23,7 @@ class GraphHud {
 
     void OnSettingsChanged() {
         m_size = vec2(graph_width, graph_height);
-        allRunsScatterPlot.UpdateSettings();
+        allRunsScatterPlot.OnSettingsChanged();
     }
 
     void Render() {

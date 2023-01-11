@@ -20,14 +20,16 @@ class AllRunsScatterPlot
     float input_target_time = 30;
 
     vec4 bounding_rect(0, 0, 0, 0);
-    
 
+    int precision;
 
     CpLog fastest_run;
     CpLog slowest_run;
 
     array<array<CpLog>> cp_log_array(0, array<CpLog>(0));
     array<CpLog> active_run_buffer(0, CpLog());
+
+    array<HistogramGroup> histogramGroupArray();
 
     array<CustomTimeTarget> custom_time_targets();
 
@@ -72,7 +74,7 @@ class AllRunsScatterPlot
         return getPlayground().Arena.MapLandmarks[idx].Waypoint.IsFinish;
     }
 
-    void UpdateSettings() {
+    void OnSettingsChanged() {
         reloadValueRange();
         bounding_rect = vec4(graph_x_offset, graph_x_offset + m_size.x, graph_y_offset, graph_y_offset + m_size.y);
     }
@@ -80,6 +82,14 @@ class AllRunsScatterPlot
      
     int getCurrentGameTime() {
         return getPlayground().Interface.ManialinkScriptHandler.GameTime;
+    }
+
+    float GET_SLOWEST_RUN_CUTOFF() {
+        if (HISTOGRAM_VIEW) {
+            return SLOW_RUN_CUTOFF_HIST;
+        } else {
+            return SLOW_RUN_CUTOFF_SCATTER;
+        }
     }
 
     /**
@@ -115,7 +125,7 @@ class AllRunsScatterPlot
         }
     }
 
-    void handleMouseHover() {
+    void renderMouseHover() {
         vec2 mouse_pos = UI::GetMousePos();
         if (mouse_pos.x > bounding_rect.x && mouse_pos.x < bounding_rect.y && mouse_pos.y > bounding_rect.z && mouse_pos.y < bounding_rect.w) {
             float mouse_hover_y = Math::Lerp(valueRange.z, valueRange.w, Math::InvLerp(bounding_rect.w, bounding_rect.z, mouse_pos.y));
@@ -132,7 +142,6 @@ class AllRunsScatterPlot
     }
     
     void Render(vec2 parentSize, float LineWidth) {
-        handleMouseHover();
         // log(tostring(UI::GetMousePos()));
         if (!g_visible) {
             return;
@@ -144,16 +153,20 @@ class AllRunsScatterPlot
         min = vec2(_padding, parentSize.y - _padding);
         max = vec2(parentSize.x - _padding, _padding);
 
-        vec4 active_color = POINT_FADE_COLOR;
+        if (!HISTOGRAM_VIEW) {
+            vec4 active_color = POINT_FADE_COLOR;
 
-        for (int i = 0; i < cp_log_array.Length; i++) {
-            renderRunHistoryScatter(cp_log_array[i], PB_COLOR, active_color);
+            for (int i = 0; i < cp_log_array.Length; i++) {
+                renderRunHistoryScatter(cp_log_array[i], PB_COLOR, active_color);
+            }
+            renderRightSideScatter(fastest_run, PB_COLOR);
+            renderMouseHover();
+            renderMedals();
+        } else {
+            renderHistogram();
         }
 
-        renderMedals();
         renderCustomInputMenu();
-
-        renderRightSideScatter(fastest_run, PB_COLOR);
     }
 
     void doCustomTimeTargetRefresh() {
@@ -246,7 +259,7 @@ class AllRunsScatterPlot
         slowest_run = fastest_run;
         for (int i = 0; i < cp_log_array.Length; i++) {
             CpLog @curCpLog = cp_log_array[i][cp_log_array[i].Length - 1];
-            if (curCpLog.cp_time > fastest_run.cp_time * SLOW_RUN_CUTOFF) {
+            if (curCpLog.cp_time > fastest_run.cp_time * GET_SLOWEST_RUN_CUTOFF()) {
                 continue;
             }
             if (curCpLog.cp_time > slowest_run.cp_time) {
@@ -292,11 +305,6 @@ class AllRunsScatterPlot
     }
 
     void reloadValueRange() {
-        int max_run_id = 0;
-        int min_run_id = 10 ** 5;
-
-        standard_deviation = getStandardDeviation(cp_log_array, NUM_SCATTER_PAST_GHOSTS);
-
         if (cp_log_array.Length > 0 && cp_log_array[0].Length > 0) {
             updateFastestRun();
             updateSlowestRun();
@@ -304,6 +312,24 @@ class AllRunsScatterPlot
             ACTIVE_NUM_CPS = 0;
             MAX_MAP_TIME = 100 * 100;
         }
+        standard_deviation = getStandardDeviation(cp_log_array, NUM_SCATTER_PAST_GHOSTS);
+        updateHistogramGroups();
+        if (HISTOGRAM_VIEW) {
+            reloadValueRangeHistogram();
+        } else {
+            reloadValueRangeScatter();
+        }
+
+    }
+
+    void reloadValueRangeHistogram() {
+        valueRange = vec4(fastest_run.cp_time - 3 * precision, fastest_run.cp_time * GET_SLOWEST_RUN_CUTOFF(), -1, getMaxHistogramCount() + 1);
+    }
+
+    void reloadValueRangeScatter() {
+        int max_run_id = 0;
+        int min_run_id = 10 ** 5;
+
 
         for (int i = 0; i < cp_log_array.Length; i++) {
             min_run_id = Math::Min(min_run_id, cp_log_array[i][0].run_id);
@@ -492,5 +518,105 @@ class AllRunsScatterPlot
         auto yv = Math::InvLerp(valueRange.z, valueRange.w, point.y);
         return vec2(graph_x_offset + Math::Lerp(min.x, max.x, xv), graph_y_offset + Math::Lerp(min.y, max.y, yv));
     }
+
+    void updateHistogramGroups() {
+        if (cp_log_array.Length == 0) {
+            return;
+        }
+        precision = Math::Max(1 / cp_log_array.Length, HIST_PRECISION_VALUE) * 1000;
+        histogramGroupArray.RemoveRange(0, histogramGroupArray.Length - 1);
+        for (int i = fastest_run.cp_time; i < fastest_run.cp_time * GET_SLOWEST_RUN_CUTOFF(); i += precision) {
+            histogramGroupArray.InsertLast(HistogramGroup(i, i + precision));
+        }
+        for (int i = 0; i < cp_log_array.Length; i++) {
+            float time = cp_log_array[i][cp_log_array[i].Length - 1].cp_time;
+            int idx = (time - fastest_run.cp_time) / precision;
+            if (idx >= histogramGroupArray.Length) {
+                continue;
+            }
+            histogramGroupArray[idx].cpLogArrays.InsertLast(cp_log_array[i]);
+        }
+    }
+
+    int getMaxHistogramCount() {
+        float m = 0; 
+        for (int i = 0; i < histogramGroupArray.Length; i++) {
+            m = Math::Max(histogramGroupArray[i].cpLogArrays.Length, m);
+        }
+        return m;
+    }
+
+    int getMaxRunId(HistogramGroup @histogramGroup) {
+        if (histogramGroup.maxRunId != -1) {
+            return histogramGroup.maxRunId;
+        } else {
+            histogramGroup.maxRunId = getMaxRunId(histogramGroup.cpLogArrays);
+            return histogramGroup.maxRunId;
+        }
+    }
+
+    int getMinRunId(HistogramGroup @histogramGroup) {
+        if (histogramGroup.minRunId != -1) {
+            return histogramGroup.minRunId; 
+        } else {
+            histogramGroup.minRunId = getMinRunId(histogramGroup.cpLogArrays);
+            return histogramGroup.minRunId; 
+        }
+    }
+
+    int getMaxRunId(array<array<CpLog>@>@ cp_log_array) {
+        int max_run_id = -1;
+        for (int i = 0; i < cp_log_array.Length; i++) {
+            max_run_id = Math::Max(max_run_id, cp_log_array[i][0].run_id);
+        }
+
+        return max_run_id; 
+    }
+
+    int getMinRunId(array<array<CpLog>@>@ cp_log_array) {
+        int min_run_id = 10 ** 6;
+        for (int i = 0; i < cp_log_array.Length; i++) {
+            min_run_id = Math::Min(min_run_id, cp_log_array[i][0].run_id);
+        }
+        return min_run_id;
+    }
+
+    void renderHistogram() {
+        for (int i = 0; i < histogramGroupArray.Length; i++) {
+            for (int j = 0; j < histogramGroupArray[i].cpLogArrays.Length; j++) {
+                array<CpLog>@ activeArr = histogramGroupArray[i].cpLogArrays[j];
+                float x_loc = activeArr[activeArr.Length - 1].cp_time;
+                float y_loc = Math::Lerp(0, histogramGroupArray[i].cpLogArrays.Length, 
+                    Math::InvLerp(
+                        getMinRunId(@histogramGroupArray[i]),
+                        getMaxRunId(@histogramGroupArray[i]
+                    ),
+                    activeArr[0].run_id));
+
+                if (histogramGroupArray[i].cpLogArrays.Length == 1) {
+                    y_loc = 0;
+                }
+                
+                vec4 color = vec4(0.5, 0.5, 0.5, 1) + OVERTIME_RUN_COLOR * Math::InvLerp(0, current_run_id, activeArr[0].run_id);
+
+                if (x_loc == fastest_run.cp_time) {
+                    color = CUSTOM_TARGET_COLOR;
+                }
+                
+
+                nvg::BeginPath();
+                nvg::Circle(
+                TransformToViewBounds(ClampVec2(vec2(x_loc, y_loc), valueRange), min, max),
+                POINT_RADIUS
+                );
+                nvg::StrokeColor(color);
+                nvg::StrokeWidth(POINT_RADIUS ** 2);
+                nvg::Stroke();
+                nvg::ClosePath();
+            }
+        }
+    }
+
+    
 
 }
