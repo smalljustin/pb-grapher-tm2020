@@ -115,5 +115,5 @@ vec4 OVERTIME_RUN_COLOR = vec4(0.19215686274509805, 0.6235294117647059, 0.580392
 [Setting category="General" name="Over-time run color fade constant" drag min=10 max=1000]
 int OVERTIME_RUN_FADE_CONSTANT = 50;
 
-[Setting category="General" name="Enable SSD mode (shorter delay after run)"]
-bool SSD = false;
+[Setting category="General" name="Max over-time run color" drag min=1.5 max=10]
+float OVERTIME_MAX_CONSTANT = 2;

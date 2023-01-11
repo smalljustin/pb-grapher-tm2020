@@ -13,6 +13,10 @@ float getAverage(array<float> values) {
             count += 1;
         }
     }
+
+    if (count == 0) {
+        return 0;
+    }
     return sum / count;
 }
 
@@ -45,6 +49,9 @@ float __getStandardDeviation(array<float> values) {
             rollingVariance += (values[i] - avg) ** 2;
             count += 1;
         }
+    }
+    if (count == 0) {
+        return DEFAULT;
     }
     rollingVariance /= count;
     return rollingVariance ** 0.5;

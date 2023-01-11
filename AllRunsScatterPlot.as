@@ -212,13 +212,28 @@ class AllRunsScatterPlot
         return getCurrentGameTime() - getPlayerStartTime();
     }
 
-    void updateFastestRun(CpLog in_cplog) {
-        fastest_run = in_cplog;
+    void updateFastestRun() {
+        fastest_run = cp_log_array[0][cp_log_array[0].Length - 1];
+        for (int i = 0; i < cp_log_array.Length; i++) {
+            CpLog @curCpLog = cp_log_array[i][cp_log_array[i].Length - 1];
+            if (curCpLog.cp_time < fastest_run.cp_time) {
+                fastest_run = curCpLog;
+            }
+        }
         ACTIVE_NUM_CPS = fastest_run.cp_id;
     }
 
-    void updateSlowestRun(CpLog in_cplog) {
-        slowest_run = in_cplog;
+    void updateSlowestRun() {
+        slowest_run = fastest_run;
+        for (int i = 0; i < cp_log_array.Length; i++) {
+            CpLog @curCpLog = cp_log_array[i][cp_log_array[i].Length - 1];
+            if (curCpLog.cp_time > fastest_run.cp_time * SLOW_RUN_CUTOFF) {
+                continue;
+            }
+            if (curCpLog.cp_time > slowest_run.cp_time) {
+                slowest_run = curCpLog;
+            }
+        }
     }
 
     /**
@@ -263,6 +278,14 @@ class AllRunsScatterPlot
 
         standard_deviation = getStandardDeviation(cp_log_array, NUM_SCATTER_PAST_GHOSTS);
 
+        if (cp_log_array.Length > 0 && cp_log_array[0].Length > 0) {
+            updateFastestRun();
+            updateSlowestRun();
+        } else {
+            ACTIVE_NUM_CPS = 0;
+            MAX_MAP_TIME = 100 * 100;
+        }
+
         for (int i = 0; i < cp_log_array.Length; i++) {
             min_run_id = Math::Min(min_run_id, cp_log_array[i][0].run_id);
             max_run_id = Math::Max(max_run_id, cp_log_array[i][0].run_id);
@@ -291,7 +314,13 @@ class AllRunsScatterPlot
                 return;
             } else {
                 current_color = OVERTIME_RUN_COLOR;
-                current_color *= RUN_FALLOFF_RATIO ** (1 + (run_cplog.cp_time - valueRange.w) / OVERTIME_RUN_FADE_CONSTANT);
+                if (run_cplog.cp_time < valueRange.w * OVERTIME_MAX_CONSTANT) {
+                    log(slowest_run.tostring());
+                    float mult = Math::InvLerp(valueRange.w, valueRange.w * OVERTIME_MAX_CONSTANT, run_cplog.cp_time);
+                    current_color *= mult;
+                    
+                    log(tostring(current_color));
+                }
             }
         } else {
             if (run_cplog.cp_log_id != fastest_run.cp_log_id) {
@@ -400,14 +429,6 @@ class AllRunsScatterPlot
         active_map_uuid = _map_uuid;
         current_run_id = databasefunctions.getMaxPreviousRunId(_map_uuid) + 1;
         cp_log_array = databasefunctions.getCpLogsForMap(_map_uuid);
-
-        if (cp_log_array.Length > 0 && cp_log_array[0].Length > 0) {
-            updateFastestRun(cp_log_array[0][cp_log_array[0].Length - 1]);
-            updateSlowestRun(cp_log_array[cp_log_array.Length - 1][cp_log_array[cp_log_array.Length - 1].Length - 1]);
-        } else {
-            ACTIVE_NUM_CPS = 0;
-            MAX_MAP_TIME = 100 * 100;
-        }
         reloadValueRange();
     }
 
