@@ -1,6 +1,6 @@
 class DatabaseFunctions {
-    // string database_filename = "pb_grapher_store_goudica.db";
-    string database_filename = "pb_grapher_store.db";
+    string database_filename = "pb_grapher_store_goudica.db";
+    // string database_filename = "pb_grapher_store.db";
     SQLite::Database@ database = SQLite::Database(database_filename);
 
     array<array<CpLog>> pendingCpLogArrayBuffer();
@@ -16,7 +16,7 @@ class DatabaseFunctions {
         JOIN run_time rt 
         ON cl.map_uuid = rt.map_uuid AND cl.run_id = rt.run_id
         WHERE cl.map_uuid = ?
-        ORDER BY rt.run_time, cl.run_id, cl.cp_id
+        ORDER BY cl.run_id, cl.cp_id
     """;
     DatabaseFunctions() {
         database.Execute("CREATE TABLE IF NOT EXISTS cp_log (cp_log_id INTEGER PRIMARY KEY AUTOINCREMENT, map_uuid VARCHAR, run_id INTEGER, cp_id INTEGER, cp_time FLOAT, UNIQUE(map_uuid, run_id, cp_id))");

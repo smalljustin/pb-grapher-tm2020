@@ -40,11 +40,8 @@ float BorderRadius = 5.0f;
 [Setting category="Display" name="Padding" drag min=0 max=10]
 float Padding = .25f;
 
-[Setting category="General" name="Scatter view: Past runs to draw" drag min=2 max=500]
+[Setting category="General" name="Scatter view: Past runs to draw" drag min=2 max=5000]
 int NUM_SCATTER_PAST_GHOSTS = 100;
-
-[Setting category="General" name="Line graph view: Past runs to draw" drag min=2 max=200]
-int NUM_LINE_PAST_GHOSTS = 5;
 
 [Setting category="Display" name="Best runs falloff ratio" drag min=0.7 max=1]
 float RUN_FALLOFF_RATIO = 0.95f;
@@ -73,7 +70,7 @@ float RIGHT_SIDE_BORDER_RADIUS = 5;
 [Setting category="General" name="Standard deviations to show below PB" drag min=0 max=2]
 float LOWER_STDEV_MULT = 0.5;
 
-[Setting category="General" name="Standard deviations to show above PB" drag min=0 max=8]
+[Setting category="General" name="Standard deviations to show above PB" drag min=0 max=1]
 float UPPER_STDEV_MULT = 2.5;
 
 [Setting category="Display" name="Custom target color" color]
@@ -115,5 +112,5 @@ vec4 OVERTIME_RUN_COLOR = vec4(0.19215686274509805, 0.6235294117647059, 0.580392
 [Setting category="General" name="Over-time run color fade constant" drag min=10 max=1000]
 int OVERTIME_RUN_FADE_CONSTANT = 50;
 
-[Setting category="General" name="Max over-time run color" drag min=1.5 max=10]
+[Setting category="General" name="Max over-time run constant" drag min=1.1 max=10]
 float OVERTIME_MAX_CONSTANT = 2;

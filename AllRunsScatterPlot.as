@@ -19,6 +19,10 @@ class AllRunsScatterPlot
 
     float input_target_time = 30;
 
+    vec4 bounding_rect(0, 0, 0, 0);
+    
+
+
     CpLog fastest_run;
     CpLog slowest_run;
 
@@ -69,7 +73,8 @@ class AllRunsScatterPlot
     }
 
     void UpdateSettings() {
-        doCpLogRefresh(active_map_uuid);
+        reloadValueRange();
+        bounding_rect = vec4(graph_x_offset, graph_x_offset + m_size.x, graph_y_offset, graph_y_offset + m_size.y);
     }
 
      
@@ -109,8 +114,26 @@ class AllRunsScatterPlot
             UI::End();
         }
     }
+
+    void handleMouseHover() {
+        vec2 mouse_pos = UI::GetMousePos();
+        if (mouse_pos.x > bounding_rect.x && mouse_pos.x < bounding_rect.y && mouse_pos.y > bounding_rect.z && mouse_pos.y < bounding_rect.w) {
+            float mouse_hover_y = Math::Lerp(valueRange.z, valueRange.w, Math::InvLerp(bounding_rect.w, bounding_rect.z, mouse_pos.y));
+            string text = "Time: " + tostring(Math::Round(mouse_hover_y / 10) / 100);
+            nvg::BeginPath();
+            // nvg::Rect(mouse_pos - vec2(0, nvg::TextBounds(text).y), nvg::TextBounds(text));
+            nvg::FillColor(vec4(.9, .9, .9, 1));
+            // nvg::Fill();
+            nvg::Text(mouse_pos, text);
+            nvg::Stroke();
+            nvg::ClosePath();
+
+        }
+    }
     
     void Render(vec2 parentSize, float LineWidth) {
+        handleMouseHover();
+        // log(tostring(UI::GetMousePos()));
         if (!g_visible) {
             return;
         }
@@ -123,12 +146,8 @@ class AllRunsScatterPlot
 
         vec4 active_color = POINT_FADE_COLOR;
 
-        if (cp_log_array.Length >= 1) {
-            renderRunHistoryScatter(cp_log_array[0], PB_COLOR);
-        } 
-    
-        for (int i = 1; i < cp_log_array.Length; i++) {
-            renderRunHistoryScatter(cp_log_array[i], active_color);
+        for (int i = 0; i < cp_log_array.Length; i++) {
+            renderRunHistoryScatter(cp_log_array[i], PB_COLOR, active_color);
         }
 
         renderMedals();
@@ -295,17 +314,24 @@ class AllRunsScatterPlot
         valueRange = vec4(min_run_id - 1, max_run_id + 1, fastest_run.cp_time - LOWER_STDEV_MULT * standard_deviation, fastest_run.cp_time + standard_deviation * UPPER_STDEV_MULT);
     }
 
-    void renderRunHistoryScatter(array<CpLog> drawn_cp_array, vec4 color) {
+    void renderRunHistoryScatter(array<CpLog> @drawn_cp_array, vec4 pb_color, vec4 active_color) {
         if (drawn_cp_array.Length == 0) {
             return;
         }
         float x_loc, y_loc; 
 
-        CpLog run_cplog = drawn_cp_array[drawn_cp_array.Length - 1];
+        CpLog @run_cplog = drawn_cp_array[drawn_cp_array.Length - 1];
+        
+        vec4 current_color;
+        
+        if (run_cplog.cp_log_id == fastest_run.cp_log_id) {
+            current_color = pb_color;
+        } else {
+            current_color = active_color;
+        }
         x_loc = run_cplog.run_id;
         y_loc = run_cplog.cp_time;
 
-        vec4 current_color = color;
         if (x_loc <= valueRange.x) {
             return;
         }
@@ -314,17 +340,15 @@ class AllRunsScatterPlot
                 return;
             } else {
                 current_color = OVERTIME_RUN_COLOR;
-                if (run_cplog.cp_time < valueRange.w * OVERTIME_MAX_CONSTANT) {
-                    log(slowest_run.tostring());
-                    float mult = Math::InvLerp(valueRange.w, valueRange.w * OVERTIME_MAX_CONSTANT, run_cplog.cp_time);
+                if (run_cplog.cp_time < valueRange.w + standard_deviation * UPPER_STDEV_MULT * OVERTIME_MAX_CONSTANT ** 2) {
+                    float mult = Math::InvLerp(valueRange.w, valueRange.w + standard_deviation * OVERTIME_MAX_CONSTANT ** 2 * UPPER_STDEV_MULT, run_cplog.cp_time);
                     current_color *= mult;
-                    
-                    log(tostring(current_color));
                 }
             }
         } else {
             if (run_cplog.cp_log_id != fastest_run.cp_log_id) {
-                current_color *= RUN_FALLOFF_RATIO ** (1 + (run_cplog.cp_time - fastest_run.cp_time) / 100);
+                float mult = 1 - Math::InvLerp(valueRange.z, valueRange.w, run_cplog.cp_time);
+                current_color *= mult;
             }
         }
 
@@ -350,7 +374,7 @@ class AllRunsScatterPlot
         renderRightSideScatter(run_cplog, POINT_FADE_COLOR);
     }
 
-    void renderRightSideScatter(CpLog run_cplog, vec4 color) {
+    void renderRightSideScatter(CpLog @run_cplog, vec4 color) {
         if (!DRAW_RIGHT_SIDE_SCATTER) {
             return;
         }
@@ -421,7 +445,6 @@ class AllRunsScatterPlot
     }
 
     void delayedActiveCpLogRefresh() {
-        sleep(2000);
         doCpLogRefresh(active_map_uuid);
     }
 

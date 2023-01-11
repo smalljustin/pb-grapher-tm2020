@@ -8,7 +8,6 @@ bool showTimeInputWindow = false;
 
 vec2 m_size = vec2(graph_width, graph_height);
 
-
 void Update(float dt) {
   graphHud.update();
 }
@@ -27,13 +26,6 @@ string getMapUid() {
 
 void RenderMenu() {
   if (UI::BeginMenu(Icons::Cog + " PB Grapher")) {
-    if (UI::MenuItem("Reset map data")) {
-      databasefunctions.resetMapData(getMapUid());
-      graphHud.OnSettingsChanged();
-    }
-    if (UI::MenuItem("Switch View")) {
-      VIEW_BY_CHECKPOINT = !VIEW_BY_CHECKPOINT;
-    }
     if (UI::MenuItem("Manage Custom Time Targets")) {
       showTimeInputWindow = !showTimeInputWindow;
       log(tostring(showTimeInputWindow));

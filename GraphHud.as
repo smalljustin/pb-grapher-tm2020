@@ -13,6 +13,10 @@ void log(const string & in name,
 class GraphHud {
     AllRunsScatterPlot allRunsScatterPlot();
 
+    GraphHud() {
+        this.OnSettingsChanged();
+    }
+
     void update() {
         allRunsScatterPlot.Update();
     }
