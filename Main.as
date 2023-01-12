@@ -28,7 +28,10 @@ void RenderMenu() {
   if (UI::BeginMenu(Icons::Cog + " PB Grapher")) {
     if (UI::MenuItem("Manage Custom Time Targets")) {
       showTimeInputWindow = !showTimeInputWindow;
-      log(tostring(showTimeInputWindow));
+    }
+      if (UI::MenuItem("Switch to/from Histogram")) {
+      HISTOGRAM_VIEW = !HISTOGRAM_VIEW;
+      graphHud.OnSettingsChanged();
     }
     UI::EndMenu();
   }
@@ -36,6 +39,9 @@ void RenderMenu() {
 
 
 void Render() {
+  if (!UI::IsRendering()) {
+    return;
+  }
   if (graphHud!is null) {
     auto app = GetApp();
     if (app.CurrentPlayground!is null && (app.CurrentPlayground.UIConfigs.Length > 0)) {

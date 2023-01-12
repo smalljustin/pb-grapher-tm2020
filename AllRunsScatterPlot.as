@@ -126,10 +126,37 @@ class AllRunsScatterPlot
     }
 
     void renderMouseHover() {
+        if (shouldRenderHistStatistics()) {
+            return;
+        }
         vec2 mouse_pos = UI::GetMousePos();
         if (mouse_pos.x > bounding_rect.x && mouse_pos.x < bounding_rect.y && mouse_pos.y > bounding_rect.z && mouse_pos.y < bounding_rect.w) {
-            float mouse_hover_y = Math::Lerp(valueRange.z, valueRange.w, Math::InvLerp(bounding_rect.w, bounding_rect.z, mouse_pos.y));
-            string text = "Time: " + tostring(Math::Round(mouse_hover_y / 10) / 100);
+            string text; 
+
+            if (HISTOGRAM_VIEW) {
+                float mouse_hover_x = Math::Lerp(valueRange.x, valueRange.y, Math::InvLerp(bounding_rect.x, bounding_rect.y, mouse_pos.x));
+                float mouse_hover_y = Math::Lerp(valueRange.z, valueRange.w, Math::InvLerp(bounding_rect.w, bounding_rect.z, mouse_pos.y));
+
+                int idx = (mouse_hover_x - fastest_run.cp_time) / precision;
+
+                if (idx < 0 || idx >= histogramGroupArray.Length) {
+                    return;
+                }
+                HistogramGroup @histGroup = histogramGroupArray[idx];
+
+                if (precision == 1) {
+                    text = "Time: " + Text::Format("%.3f", histGroup.lower / 1000);
+                } else {
+                    text = "Time: " + Text::Format("%.3f", histGroup.lower / 1000) + " to " + Text::Format("%.3f", histGroup.upper / 1000);
+                }
+
+                text += "\tRuns: " + tostring(Math::Ceil(histGroup.cpLogArrays.Length));
+
+            } else {
+                float mouse_hover_y = Math::Lerp(valueRange.z, valueRange.w, Math::InvLerp(bounding_rect.w, bounding_rect.z, mouse_pos.y));
+                text = "Time: " + tostring(Math::Round(mouse_hover_y / 10) / 100);
+            }
+
             nvg::BeginPath();
             // nvg::Rect(mouse_pos - vec2(0, nvg::TextBounds(text).y), nvg::TextBounds(text));
             nvg::FillColor(vec4(.9, .9, .9, 1));
@@ -137,8 +164,62 @@ class AllRunsScatterPlot
             nvg::Text(mouse_pos, text);
             nvg::Stroke();
             nvg::ClosePath();
-
         }
+    }
+
+    bool shouldRenderHistStatistics() {
+        vec2 textPos = vec2(graph_width + graph_x_offset, graph_y_offset * 2);
+
+        if (((UI::GetMousePos() + vec2(80, 0)) - textPos).LengthSquared() > 10000) {
+            return false;
+        }
+        return true;
+    }
+
+    void renderHistStatistics() {
+        vec2 textPos = vec2(graph_width + graph_x_offset, graph_y_offset * 2);
+
+        if (!shouldRenderHistStatistics()) {
+            return;
+        }
+
+        array<string> lines();
+
+        lines.InsertLast("\n\nStatistics");
+        // lines.InsertLast("----------------------------");
+        // lines.InsertLast( "Total Runs: " + Text::Format("%d", cp_log_array.Length));
+        
+        vec2 textSize = nvg::TextBounds(lines[0]);
+        // vec2 textPos = vec2(graph_width + graph_x_offset, graph_y_offset);
+        // textPos = UI::GetMousePos();
+
+        textPos -= textSize * 1.1;
+        nvg::BeginPath();
+        nvg::FillColor(vec4(.9, .9, .9, 1));
+        nvg::TextAlign(0);
+
+        for (int i = 0; i < lines.Length; i++) {
+            string text = lines[i];
+            nvg::Text(textPos, text);
+            textPos.y += textSize.y + 4;
+        }
+
+        textPos.y += 4;
+
+        int i = 0;
+        while (true) {
+            if (histogramGroupArray[i].cpLogArrays.Length != 0) {
+                nvg::Text(textPos, "\n" + Text::Format("%.3f", histogramGroupArray[i].lower / 1000) + ":\t" + tostring(histogramGroupArray[i].cpLogArrays.Length));
+                textPos.y += textSize.y + 4;
+            }
+            i += 1;
+
+            if (textPos.y > (graph_y_offset + graph_height - ((textSize.y * BOTTOM_MARGIN) + 4))) {
+                break;
+            }
+        }
+        nvg::Stroke();
+        nvg::ClosePath();
     }
     
     void Render(vec2 parentSize, float LineWidth) {
@@ -160,12 +241,12 @@ class AllRunsScatterPlot
                 renderRunHistoryScatter(cp_log_array[i], PB_COLOR, active_color);
             }
             renderRightSideScatter(fastest_run, PB_COLOR);
-            renderMouseHover();
-            renderMedals();
         } else {
             renderHistogram();
+            renderHistStatistics();
         }
-
+        renderMouseHover();
+        renderMedals();
         renderCustomInputMenu();
     }
 
@@ -459,15 +540,29 @@ class AllRunsScatterPlot
     }
 
     void renderMedal(float time, vec4 color) {
-        if (time > valueRange.z && time < valueRange.w) {
-            nvg::BeginPath();
-            nvg::MoveTo(TransformToViewBounds(ClampVec2(vec2(valueRange.x, time), valueRange), min, max));
-            nvg::LineTo(TransformToViewBounds(ClampVec2(vec2(valueRange.y, time), valueRange), min, max));
-            nvg::StrokeColor(color);
-            nvg::StrokeWidth(LineWidth);
-            nvg::Stroke();
-            nvg::ClosePath();
+        if (HISTOGRAM_VIEW && SHOW_MEDALS_IN_HISTOGRAM) {
+            if (time > valueRange.x && time < valueRange.y) {
+                nvg::BeginPath();
+                nvg::MoveTo(TransformToViewBounds(ClampVec2(vec2(time, valueRange.z), valueRange), min, max));
+                nvg::LineTo(TransformToViewBounds(ClampVec2(vec2(time, valueRange.w), valueRange), min, max));
+                nvg::StrokeColor(color);
+                nvg::StrokeWidth(LineWidth);
+                nvg::Stroke();
+                nvg::ClosePath();
+            }
+        } else {
+                    if (time > valueRange.z && time < valueRange.w) {
+                nvg::BeginPath();
+                nvg::MoveTo(TransformToViewBounds(ClampVec2(vec2(valueRange.x, time), valueRange), min, max));
+                nvg::LineTo(TransformToViewBounds(ClampVec2(vec2(valueRange.y, time), valueRange), min, max));
+                nvg::StrokeColor(color);
+                nvg::StrokeWidth(LineWidth);
+                nvg::Stroke();
+                nvg::ClosePath();
+            }
         }
+
+
     }
 
     void delayedActiveCpLogRefresh() {
@@ -523,12 +618,16 @@ class AllRunsScatterPlot
         if (cp_log_array.Length == 0) {
             return;
         }
-        precision = Math::Max(1 / cp_log_array.Length, HIST_PRECISION_VALUE) * 1000;
-        histogramGroupArray.RemoveRange(0, histogramGroupArray.Length - 1);
+        precision = HIST_PRECISION_VALUE * 1000;
+        histogramGroupArray = array<HistogramGroup>();
         for (int i = fastest_run.cp_time; i < fastest_run.cp_time * GET_SLOWEST_RUN_CUTOFF(); i += precision) {
             histogramGroupArray.InsertLast(HistogramGroup(i, i + precision));
         }
-        for (int i = 0; i < cp_log_array.Length; i++) {
+
+        int end_pos = cp_log_array.Length - HIST_RUN_START_OFFSET;
+        int start_pos = Math::Max(0, end_pos - HIST_RUNS_TO_SHOW);
+        
+        for (int i = start_pos; i < end_pos; i++) {
             float time = cp_log_array[i][cp_log_array[i].Length - 1].cp_time;
             int idx = (time - fastest_run.cp_time) / precision;
             if (idx >= histogramGroupArray.Length) {
@@ -597,7 +696,7 @@ class AllRunsScatterPlot
                     y_loc = 0;
                 }
                 
-                vec4 color = vec4(0.5, 0.5, 0.5, 1) + OVERTIME_RUN_COLOR * Math::InvLerp(0, current_run_id, activeArr[0].run_id);
+                vec4 color = OVERTIME_RUN_COLOR * Math::InvLerp(0, current_run_id, activeArr[0].run_id) ** 0.5;
 
                 if (x_loc == fastest_run.cp_time) {
                     color = CUSTOM_TARGET_COLOR;
