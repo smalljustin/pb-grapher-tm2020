@@ -39,7 +39,7 @@ void RenderMenu() {
 
 
 void Render() {
-  if (!UI::IsRendering()) {
+  if (!UI::IsRendering() || !g_visible) {
     return;
   }
   if (graphHud!is null) {
