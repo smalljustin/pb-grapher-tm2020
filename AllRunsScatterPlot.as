@@ -21,7 +21,12 @@ class AllRunsScatterPlot
 
     vec4 bounding_rect(0, 0, 0, 0);
 
+    int drawn_runs = 0;
+
     int precision;
+
+    bool WINDOW_MOVING;
+    vec2 click_loc(0, 0);
 
     CpLog fastest_run;
     CpLog slowest_run;
@@ -76,6 +81,10 @@ class AllRunsScatterPlot
 
     void OnSettingsChanged() {
         reloadValueRange();
+        updateBoundingRect();
+    }
+
+    void updateBoundingRect() {
         bounding_rect = vec4(graph_x_offset, graph_x_offset + m_size.x, graph_y_offset, graph_y_offset + m_size.y);
     }
 
@@ -92,6 +101,22 @@ class AllRunsScatterPlot
         }
     }
 
+    void adjustStDevTarget() {
+        if (MANUAL_OVERRIDE_SCATTER_BOUNDS) {
+            return;
+        }
+        float frac = float(drawn_runs) / Math::Min(cp_log_array.Length, NUM_SCATTER_PAST_GHOSTS);
+        float diff = Math::Abs(frac - SCATTER_TARGET_PERCENT);
+        if (Math::Abs(diff) < 10.0 / cp_log_array.Length) {
+            return;
+        }
+        if (frac < SCATTER_TARGET_PERCENT) {
+            UPPER_STDEV_MULT += Math::Min(0.01, diff);
+        } else {
+            UPPER_STDEV_MULT -= Math::Min(0.01, diff);
+        }
+        reloadValueRange();
+    }
     /**
      * Returns the player's starting time as an integer. 
      */
@@ -126,7 +151,7 @@ class AllRunsScatterPlot
     }
 
     void renderMouseHover() {
-        if (shouldRenderHistStatistics()) {
+        if (HISTOGRAM_VIEW && shouldRenderHistStatistics()) {
             return;
         }
         vec2 mouse_pos = UI::GetMousePos();
@@ -154,7 +179,7 @@ class AllRunsScatterPlot
 
             } else {
                 float mouse_hover_y = Math::Lerp(valueRange.z, valueRange.w, Math::InvLerp(bounding_rect.w, bounding_rect.z, mouse_pos.y));
-                text = "Time: " + tostring(Math::Round(mouse_hover_y / 10) / 100);
+                text = "Time: " + Text::Format("%.3f", mouse_hover_y / 1000);
             }
 
             nvg::BeginPath();
@@ -177,21 +202,17 @@ class AllRunsScatterPlot
     }
 
     void renderHistStatistics() {
-        vec2 textPos = vec2(graph_width + graph_x_offset, graph_y_offset * 2);
+        vec2 textPos = vec2(graph_width + graph_x_offset, graph_y_offset + 32);
 
-        if (!shouldRenderHistStatistics()) {
+        if (!HIST_ALWAYS_SHOW_RUN_INFO && !shouldRenderHistStatistics()) {
             return;
         }
 
         array<string> lines();
 
         lines.InsertLast("\n\nStatistics");
-        // lines.InsertLast("----------------------------");
-        // lines.InsertLast( "Total Runs: " + Text::Format("%d", cp_log_array.Length));
         
         vec2 textSize = nvg::TextBounds(lines[0]);
-        // vec2 textPos = vec2(graph_width + graph_x_offset, graph_y_offset);
-        // textPos = UI::GetMousePos();
 
         textPos -= textSize * 1.1;
         nvg::BeginPath();
@@ -207,7 +228,7 @@ class AllRunsScatterPlot
         textPos.y += 4;
 
         int i = 0;
-        while (true) {
+        while (i < histogramGroupArray.Length) {
             if (histogramGroupArray[i].cpLogArrays.Length != 0) {
                 nvg::Text(textPos, "\n" + Text::Format("%.3f", histogramGroupArray[i].lower / 1000) + ":\t" + tostring(histogramGroupArray[i].cpLogArrays.Length));
                 textPos.y += textSize.y + 4;
@@ -223,24 +244,26 @@ class AllRunsScatterPlot
     }
     
     void Render(vec2 parentSize, float LineWidth) {
-        // log(tostring(UI::GetMousePos()));
         if (!g_visible) {
             return;
         }
-        if (cp_log_array.Length == 0) {
+        if (cp_log_array.Length == 0 || precision == 0 || standard_deviation == 0) {
             return;
         }
         float _padding = padding;
         min = vec2(_padding, parentSize.y - _padding);
         max = vec2(parentSize.x - _padding, _padding);
 
+
         if (!HISTOGRAM_VIEW) {
+            drawn_runs = 0;
             vec4 active_color = POINT_FADE_COLOR;
 
             for (int i = 0; i < cp_log_array.Length; i++) {
                 renderRunHistoryScatter(cp_log_array[i], PB_COLOR, active_color);
             }
             renderRightSideScatter(fastest_run, PB_COLOR);
+            adjustStDevTarget();
         } else {
             renderHistogram();
             renderHistStatistics();
@@ -248,6 +271,7 @@ class AllRunsScatterPlot
         renderMouseHover();
         renderMedals();
         renderCustomInputMenu();
+        handleWindowMoving();
     }
 
     void doCustomTimeTargetRefresh() {
@@ -453,13 +477,12 @@ class AllRunsScatterPlot
                 }
             }
         } else {
-            if (run_cplog.cp_log_id != fastest_run.cp_log_id) {
+            drawn_runs += 1;
+            if (run_cplog.cp_time != fastest_run.cp_time) {
                 float mult = 1 - Math::InvLerp(valueRange.z, valueRange.w, run_cplog.cp_time);
                 current_color *= mult;
             }
         }
-
-
 
         vec2 max_with_width = max;
         if (DRAW_RIGHT_SIDE_SCATTER) {
@@ -615,6 +638,9 @@ class AllRunsScatterPlot
     }
 
     void updateHistogramGroups() {
+        startnew(CoroutineFunc(this._updateHistogramGroups));
+    }
+    void _updateHistogramGroups() {
         if (cp_log_array.Length == 0) {
             return;
         }
@@ -716,6 +742,21 @@ class AllRunsScatterPlot
         }
     }
 
-    
+    void handleWindowMoving() {
+        if (!WINDOW_MOVING) {
+            return;
+        }
+        vec2 pos = UI::GetMousePos();
+        graph_x_offset = pos.x - click_loc.x;
+        graph_y_offset = pos.y - click_loc.y;
+        updateBoundingRect();
+    }
 
+    void OnMouseButton(bool down, int button, int x, int y) {
+        if (x > bounding_rect.x && x < bounding_rect.y && y > bounding_rect.z && y < bounding_rect.w) {
+            WINDOW_MOVING = down;
+            click_loc = vec2(x - graph_x_offset, y - graph_y_offset);
+        }
+    }
 }
+

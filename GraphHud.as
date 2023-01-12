@@ -37,4 +37,7 @@ class GraphHud {
         nvg::Stroke();
         allRunsScatterPlot.Render(m_size, LineWidth);
     }
+    void OnMouseButton(bool down, int button, int x, int y) {
+        allRunsScatterPlot.OnMouseButton(down, button, x, y);
+    }
 }

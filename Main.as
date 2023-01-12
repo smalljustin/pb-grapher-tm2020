@@ -63,3 +63,7 @@ void Main() {
   @databasefunctions = DatabaseFunctions();
   graphHud.OnSettingsChanged();
 }
+
+void OnMouseButton(bool down, int button, int x, int y) {
+  graphHud.OnMouseButton(down, button, x, y);
+}

@@ -39,11 +39,11 @@ float BorderRadius = 5.0f;
 
 float Padding = .25f;
 
-[Setting category="General" name="Scatter view: Past runs to draw" drag min=2 max=5000]
+[Setting category="Scatter" name="Scatter view: Past runs to draw" drag min=2 max=5000]
 int NUM_SCATTER_PAST_GHOSTS = 4000;
 
 [Setting category="Display" name="Point radius" min=0.1 max=10 drag]
-float POINT_RADIUS = 1;
+float POINT_RADIUS = 1.5;
 
 [Setting category="Display" name="Point fade color" color]
 vec4 POINT_FADE_COLOR = vec4(1, 1, 1, 1);
@@ -52,7 +52,7 @@ vec4 POINT_FADE_COLOR = vec4(1, 1, 1, 1);
 vec4 PB_COLOR = vec4(0.5843137254901961, 0.9764705882352941, 0.8901960784313725, 1.0);
 
 [Setting category="Scatter" name="Standard deviations to show below PB" drag min=0 max=2]
-float LOWER_STDEV_MULT = 0.5;
+float LOWER_STDEV_MULT = 0.125;
 
 [Setting category="Scatter" name="Standard deviations to show above PB" drag min=0 max=1]
 float UPPER_STDEV_MULT = 2.5;
@@ -108,7 +108,7 @@ vec4 OVERTIME_RUN_COLOR = vec4(0.19215686274509805, 0.6235294117647059, 0.580392
 [Setting category="Display" name="Over-time run color fade constant" drag min=10 max=1000]
 int OVERTIME_RUN_FADE_CONSTANT = 50;
 
-[Setting category="General" name="Max over-time run constant" drag min=1.1 max=10]
+[Setting category="Scatter" name="Max over-time run constant" drag min=1.1 max=10]
 float OVERTIME_MAX_CONSTANT = 2;
 
 [Setting category="Histogram" name="Histogram precision value" drag min=0.001 max=0.3]
@@ -126,5 +126,14 @@ int HIST_RUN_START_OFFSET = 0;
 [Setting category="Histogram" name="Cutoff Multiplier for Slow Runs - Histogram" drag min=1 max=1.5]
 float SLOW_RUN_CUTOFF_HIST = 1.025;
 
+[Setting category="Histogram" name="Always show run distribution text"]
+bool HIST_ALWAYS_SHOW_RUN_INFO = false;
+
 [Setting category="Histogram" name="Show target times in histogram"]
 bool SHOW_MEDALS_IN_HISTOGRAM = true;
+
+[Setting category="Scatter" name="Target fraction of runs to show" drag min=0.1 max=1]
+float SCATTER_TARGET_PERCENT = 0.875;
+
+[Setting category="Scatter" name="Manually adjust scatter bounds"]
+bool MANUAL_OVERRIDE_SCATTER_BOUNDS = false;
