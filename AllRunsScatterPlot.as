@@ -722,10 +722,10 @@ class AllRunsScatterPlot
                     y_loc = 0;
                 }
                 
-                vec4 color = OVERTIME_RUN_COLOR * Math::InvLerp(0, current_run_id, activeArr[0].run_id) ** 0.5;
+                vec4 color = HISTOGRAM_RUN_COLOR * Math::InvLerp(0, current_run_id, activeArr[0].run_id) ** 0.5;
 
                 if (x_loc == fastest_run.cp_time) {
-                    color = CUSTOM_TARGET_COLOR;
+                    color = HISTOGRAM_PB_COLOR;
                 }
                 
 

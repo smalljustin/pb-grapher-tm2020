@@ -137,3 +137,9 @@ float SCATTER_TARGET_PERCENT = 0.875;
 
 [Setting category="Scatter" name="Manually adjust scatter bounds"]
 bool MANUAL_OVERRIDE_SCATTER_BOUNDS = false;
+
+[Setting category="Display" name="Histogram run color" color]
+vec4 HISTOGRAM_RUN_COLOR = vec4(0.19215686274509805, 0.6235294117647059, 0.5803921568627451, 1.0);
+
+[Setting category="Display" name="Histogram best run color" color]
+vec4 HISTOGRAM_PB_COLOR = vec4(0.5843137254901961, 0.9764705882352941, 0.8901960784313725, 1.0);
