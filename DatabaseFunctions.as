@@ -1,6 +1,5 @@
 class DatabaseFunctions {
-    string database_filename = "pb_grapher_store_goudica.db";
-    // string database_filename = "pb_grapher_store.db";
+    string database_filename = "pb_grapher_store.db";
     SQLite::Database@ database = SQLite::Database(database_filename);
 
     array<array<CpLog>> pendingCpLogArrayBuffer();
