@@ -54,7 +54,7 @@ vec4 PB_COLOR = vec4(0.5843137254901961, 0.9764705882352941, 0.8901960784313725,
 [Setting category="Scatter" name="Standard deviations to show below PB" drag min=0 max=2]
 float LOWER_STDEV_MULT = 0.125;
 
-[Setting category="Scatter" name="Standard deviations to show above PB" drag min=0 max=1]
+[Setting category="Scatter" name="Standard deviations to show above PB" drag min=0 max=5]
 float UPPER_STDEV_MULT = 2.5;
 
 [Setting category="Display" name="Custom target color" color]
