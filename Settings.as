@@ -96,7 +96,7 @@ bool DRAW_BRONZE = true;
 [Setting category="Medals" name="Bronze Line Color" color]
 vec4 BRONZE_COLOR = vec4(0.5490196078431373, 0.3529411764705882, 0.203921568627451, .7);
 
-[Setting category="Scatter" name="Cutoff Multiplier for Slow Runs - Scatter" drag min=1 max=1.5]
+[Setting category="Scatter" name="Cutoff Multiplier for Slow Runs - Scatter" drag min=1 max=3]
 float SLOW_RUN_CUTOFF_SCATTER = 1.15;
 
 [Setting category="Scatter" name="Show over-time runs in graph"]
@@ -132,8 +132,11 @@ bool HIST_ALWAYS_SHOW_RUN_INFO = false;
 [Setting category="Histogram" name="Show target times in histogram"]
 bool SHOW_MEDALS_IN_HISTOGRAM = true;
 
-[Setting category="Scatter" name="Target fraction of runs to show" drag min=0.1 max=1]
+[Setting category="Scatter" name="Target fraction of runs to show" drag min=0.1 max=.8]
 float SCATTER_TARGET_PERCENT = 0.875;
+
+[Setting category="Scatter" name="Override: Show All Runs"]
+bool SCATTER_SHOW_ALL_RUNS = false;
 
 [Setting category="Scatter" name="Manually adjust scatter bounds"]
 bool MANUAL_OVERRIDE_SCATTER_BOUNDS = false;

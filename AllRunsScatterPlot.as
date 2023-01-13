@@ -22,6 +22,7 @@ class AllRunsScatterPlot
     vec4 bounding_rect(0, 0, 0, 0);
 
     int drawn_runs = 0;
+    int all_runs = 0;
 
     int precision;
 
@@ -102,10 +103,10 @@ class AllRunsScatterPlot
     }
 
     void adjustStDevTarget() {
-        if (MANUAL_OVERRIDE_SCATTER_BOUNDS) {
+        if (MANUAL_OVERRIDE_SCATTER_BOUNDS || SCATTER_SHOW_ALL_RUNS) {
             return;
         }
-        float frac = float(drawn_runs) / Math::Min(cp_log_array.Length, NUM_SCATTER_PAST_GHOSTS);
+        float frac = float(drawn_runs) / float(all_runs);
         float diff = Math::Abs(frac - SCATTER_TARGET_PERCENT);
         if (Math::Abs(diff) < 10.0 / cp_log_array.Length) {
             return;
@@ -257,6 +258,7 @@ class AllRunsScatterPlot
 
         if (!HISTOGRAM_VIEW) {
             drawn_runs = 0;
+            all_runs = 0;
             vec4 active_color = POINT_FADE_COLOR;
 
             for (int i = 0; i < cp_log_array.Length; i++) {
@@ -443,6 +445,10 @@ class AllRunsScatterPlot
         min_run_id = Math::Max(min_run_id, max_run_id - NUM_SCATTER_PAST_GHOSTS);
 
         valueRange = vec4(min_run_id - 1, max_run_id + 1, fastest_run.cp_time - LOWER_STDEV_MULT * standard_deviation, fastest_run.cp_time + standard_deviation * UPPER_STDEV_MULT);
+
+        if (SCATTER_SHOW_ALL_RUNS) {
+            valueRange.w = slowest_run.cp_time * 1.1;
+        }
     }
 
     void renderRunHistoryScatter(array<CpLog> @drawn_cp_array, vec4 pb_color, vec4 active_color) {
@@ -466,6 +472,7 @@ class AllRunsScatterPlot
         if (x_loc <= valueRange.x) {
             return;
         }
+        all_runs += 1;
         if (y_loc >= valueRange.w) {
             if (!SHOW_OVERTIME_RUNS) {
                 return;
