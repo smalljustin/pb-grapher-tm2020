@@ -23,6 +23,8 @@ class AllRunsScatterPlot
 
     int drawn_runs = 0;
     int all_runs = 0;
+    int run_derivative = 0;
+    bool run_solved = false;
 
     int precision;
 
@@ -83,6 +85,8 @@ class AllRunsScatterPlot
     void OnSettingsChanged() {
         reloadValueRange();
         updateBoundingRect();
+        run_derivative = 0;
+        run_solved = false;
     }
 
     void updateBoundingRect() {
@@ -103,18 +107,22 @@ class AllRunsScatterPlot
     }
 
     void adjustStDevTarget() {
-        if (MANUAL_OVERRIDE_SCATTER_BOUNDS || SCATTER_SHOW_ALL_RUNS) {
+        if (MANUAL_OVERRIDE_SCATTER_BOUNDS || SCATTER_SHOW_ALL_RUNS || HISTOGRAM_VIEW || run_solved) {
             return;
         }
         float frac = float(drawn_runs) / float(all_runs);
-        float diff = Math::Abs(frac - SCATTER_TARGET_PERCENT);
-        if (Math::Abs(diff) < 10.0 / cp_log_array.Length) {
-            return;
-        }
         if (frac < SCATTER_TARGET_PERCENT) {
-            UPPER_STDEV_MULT += Math::Min(0.01, diff);
+            if (run_derivative == -1) {
+                run_solved = true;
+            }
+            run_derivative = 1;
+            UPPER_STDEV_MULT += 0.025;
         } else {
-            UPPER_STDEV_MULT -= Math::Min(0.01, diff);
+            if (run_derivative == 1) {
+                run_solved = true;
+            }
+            run_derivative = -1;
+            UPPER_STDEV_MULT -= .025;
         }
         reloadValueRange();
     }
@@ -259,13 +267,14 @@ class AllRunsScatterPlot
         if (!HISTOGRAM_VIEW) {
             drawn_runs = 0;
             all_runs = 0;
+
             vec4 active_color = POINT_FADE_COLOR;
 
             for (int i = 0; i < cp_log_array.Length; i++) {
                 renderRunHistoryScatter(cp_log_array[i], PB_COLOR, active_color);
             }
             renderRightSideScatter(fastest_run, PB_COLOR);
-            adjustStDevTarget();
+            startnew(CoroutineFunc(this.adjustStDevTarget));
         } else {
             renderHistogram();
             renderHistStatistics();
