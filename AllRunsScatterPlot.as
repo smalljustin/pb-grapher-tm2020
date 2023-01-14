@@ -305,6 +305,7 @@ class AllRunsScatterPlot
             current_cp_id = getCurrentCheckpoint();
             active_run_buffer = array<CpLog>();
             RUN_IS_RESPAWN = false;
+            current_lap = 1;
             return false;
         }
     }
