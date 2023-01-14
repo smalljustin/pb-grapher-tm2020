@@ -2,6 +2,7 @@ class DatabaseFunctions {
     string database_filename = "pb_grapher_store.db";
     SQLite::Database@ database = SQLite::Database(database_filename);
 
+
     array<array<CpLog>> pendingCpLogArrayBuffer();
 
     string getCpLogsForMapSql = """
@@ -20,6 +21,9 @@ class DatabaseFunctions {
     DatabaseFunctions() {
         database.Execute("CREATE TABLE IF NOT EXISTS cp_log (cp_log_id INTEGER PRIMARY KEY AUTOINCREMENT, map_uuid VARCHAR, run_id INTEGER, cp_id INTEGER, cp_time FLOAT, UNIQUE(map_uuid, run_id, cp_id))");
         database.Execute("CREATE TABLE IF NOT EXISTS custom_time_targets (custom_target_id INTEGER PRIMARY KEY AUTOINCREMENT, map_uuid VARCHAR, target_time FLOAT)");
+        // https://phiresky.github.io/blog/2020/sqlite-performance-tuning/
+        database.Execute("pragma journal_mode = WAL;");
+        database.Execute("pragma synchronous = normal;");
     }
 
     void persist() {

@@ -107,7 +107,7 @@ class AllRunsScatterPlot
     }
 
     void adjustStDevTarget() {
-        if (MANUAL_OVERRIDE_SCATTER_BOUNDS || SCATTER_SHOW_ALL_RUNS || HISTOGRAM_VIEW || run_solved) {
+        if (MANUAL_OVERRIDE_SCATTER_BOUNDS || SCATTER_SHOW_ALL_RUNS || HISTOGRAM_VIEW || run_solved || (all_runs == 0)) {
             return;
         }
         float frac = float(drawn_runs) / float(all_runs);
