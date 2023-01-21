@@ -217,7 +217,7 @@ class AllRunsScatterPlot
     }
 
     void renderHistStatistics() {
-        vec2 textPos = vec2(graph_width + graph_x_offset, graph_y_offset + 32);
+        vec2 textPos = vec2(graph_width + graph_x_offset, graph_y_offset + 40);
 
         if (!HIST_ALWAYS_SHOW_RUN_INFO && !shouldRenderHistStatistics()) {
             return;
@@ -255,7 +255,7 @@ class AllRunsScatterPlot
                 text += ":\t" + tostring(histogramGroupArray[i].cpLogArrays.Length);
                 
                 if (!pos_set) {
-                    textPos.x = graph_width + graph_x_offset - nvg::TextBounds(text).x - 8;
+                    textPos.x = graph_width + graph_x_offset - nvg::TextBounds(text).x - 16;
                     pos_set = true;
                 }
                 
