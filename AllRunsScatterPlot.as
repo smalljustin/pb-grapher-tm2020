@@ -241,11 +241,25 @@ class AllRunsScatterPlot
         }
 
         textPos.y += 4;
-
         int i = 0;
+        bool pos_set = false;
         while (i < histogramGroupArray.Length) {
             if (histogramGroupArray[i].cpLogArrays.Length != 0) {
-                nvg::Text(textPos, "\n" + Text::Format("%.3f", histogramGroupArray[i].lower / 1000) + ":\t" + tostring(histogramGroupArray[i].cpLogArrays.Length));
+                HistogramGroup@ histGroup = histogramGroupArray[i];
+                string text;
+                if (precision == 1) {
+                    text = "Time: " + Text::Format("%.3f", histGroup.lower / 1000);
+                } else {
+                    text = "Time: " + Text::Format("%.3f", histGroup.lower / 1000) + " to " + Text::Format("%.3f", histGroup.upper / 1000);
+                }
+                text += ":\t" + tostring(histogramGroupArray[i].cpLogArrays.Length);
+                
+                if (!pos_set) {
+                    textPos.x = graph_width + graph_x_offset - nvg::TextBounds(text).x - 8;
+                    pos_set = true;
+                }
+                
+                nvg::Text(textPos, text);
                 textPos.y += textSize.y + 4;
             }
             i += 1;
@@ -348,7 +362,10 @@ class AllRunsScatterPlot
                 current_run_id += 1;
                 reloadValueRange();
                 startnew(CoroutineFunc(this.delayedActiveCpLogRefresh));
-                run_solved = false;
+
+                if (AUTO_ADJUST_VIEW_BOUNDS_POST_RUN) {
+                    run_solved = false;
+                }
             }
             race_completed = false;
         }

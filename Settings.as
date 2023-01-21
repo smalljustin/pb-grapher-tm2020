@@ -155,3 +155,6 @@ bool SHOW_WITH_HIDDEN_INTERFACE = false;
 
 [Setting category="General" name="Only render when Openplanet (F3) menu is open"] 
 bool RENDERINTERFACE_RENDER_MODE = true;
+
+[Setting category="General" name="Auto-adjust the scatter view bounds after each run"]
+bool AUTO_ADJUST_VIEW_BOUNDS_POST_RUN = true;
