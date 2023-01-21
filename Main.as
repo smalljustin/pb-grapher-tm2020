@@ -4,8 +4,6 @@ float g_dt = 0;
 float HALF_PI = 1.57079632679;
 string surface_override = "";
 
-bool showTimeInputWindow = false;
-
 vec2 m_size = vec2(graph_width, graph_height);
 
 void Update(float dt) {
@@ -33,13 +31,26 @@ void RenderMenu() {
       HISTOGRAM_VIEW = !HISTOGRAM_VIEW;
       graphHud.OnSettingsChanged();
     }
+      if (UI::MenuItem("Show/Hide Graph")) {
+      g_visible = !g_visible;
+      graphHud.OnSettingsChanged();
+    }
     UI::EndMenu();
   }
 }
 
+bool shouldNotRender() {
+    bool ret = !g_visible
+      || !UI::IsRendering()
+      || getMapUid() == ""
+      || (!SHOW_WITH_HIDDEN_INTERFACE && !UI::IsGameUIVisible())
+      || GetApp().CurrentPlayground is null
+      || GetApp().CurrentPlayground.Interface is null;
+    return ret;
+}
 
 void Render() {
-  if (!UI::IsRendering() || !g_visible) {
+  if (RENDERINTERFACE_RENDER_MODE || shouldNotRender()) {
     return;
   }
   if (graphHud!is null) {
@@ -49,7 +60,21 @@ void Render() {
         return;
       }
     }
-    if (getMapUid() != "" && UI::IsGameUIVisible())
+      graphHud.Render();
+  }
+}
+
+void RenderInterface() {
+  if (!RENDERINTERFACE_RENDER_MODE || shouldNotRender()) {
+    return;
+  }
+  if (graphHud!is null) {
+    auto app = GetApp();
+    if (app.CurrentPlayground!is null && (app.CurrentPlayground.UIConfigs.Length > 0)) {
+      if (app.CurrentPlayground.UIConfigs[0].UISequence == CGamePlaygroundUIConfig::EUISequence::Intro) {
+        return;
+      }
+    }
       graphHud.Render();
   }
 }

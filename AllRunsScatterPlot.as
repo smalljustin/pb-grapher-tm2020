@@ -76,6 +76,9 @@ class AllRunsScatterPlot
     bool isMultiLap() {
         return GetApp().RootMap.TMObjective_IsLapRace;
     }
+    bool isEditorOpen() {
+        return false;
+    }
 
 
     bool isIdxFinish(int idx) {
@@ -153,6 +156,9 @@ class AllRunsScatterPlot
                 if (UI::Button("Remove All", vec2(200, 30))) {
                     databasefunctions.removeAllCustomTimeTargets(active_map_uuid);
                     doCustomTimeTargetRefresh();
+                };
+                if (UI::Button("Close", vec2(200, 30))) {
+                    showTimeInputWindow = false;
                 };
 
             UI::End();
@@ -253,7 +259,7 @@ class AllRunsScatterPlot
     }
     
     void Render(vec2 parentSize, float LineWidth) {
-        if (!g_visible) {
+        if (!g_visible || isEditorOpen()) {
             return;
         }
         if (cp_log_array.Length == 0 || precision == 0 || standard_deviation == 0) {
@@ -342,6 +348,7 @@ class AllRunsScatterPlot
                 current_run_id += 1;
                 reloadValueRange();
                 startnew(CoroutineFunc(this.delayedActiveCpLogRefresh));
+                run_solved = false;
             }
             race_completed = false;
         }

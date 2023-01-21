@@ -3,7 +3,7 @@ class DatabaseFunctions {
     SQLite::Database@ database = SQLite::Database(database_filename);
 
 
-    array<array<CpLog>> pendingCpLogArrayBuffer();
+    array<array<CpLog>> pendingCpLogArrayBuffer;
 
     string getCpLogsForMapSql = """
         WITH run_time AS 

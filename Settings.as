@@ -146,3 +146,12 @@ vec4 HISTOGRAM_RUN_COLOR = vec4(0.19215686274509805, 0.6235294117647059, 0.58039
 
 [Setting category="Display" name="Histogram best run color" color]
 vec4 HISTOGRAM_PB_COLOR = vec4(0.5843137254901961, 0.9764705882352941, 0.8901960784313725, 1.0);
+
+[Setting category="General" name="Show custom time input window"]
+bool showTimeInputWindow = false;
+
+[Setting category="General" name="Show graph when game interface hidden"]
+bool SHOW_WITH_HIDDEN_INTERFACE = false;
+
+[Setting category="General" name="Only render when Openplanet (F3) menu is open"] 
+bool RENDERINTERFACE_RENDER_MODE = true;
