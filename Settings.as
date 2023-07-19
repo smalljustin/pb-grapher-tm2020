@@ -158,3 +158,18 @@ bool RENDERINTERFACE_RENDER_MODE = true;
 
 [Setting category="General" name="Auto-adjust the scatter view bounds after each run"]
 bool AUTO_ADJUST_VIEW_BOUNDS_POST_RUN = true;
+
+[Setting category="General" name="Always include fastest custom target time in graph"]
+bool INCLUDE_FASTEST_CUSTOM_TARGET_TIME = true;
+
+[Setting category="General" name="Always include slowest custom target time in graph"]
+bool INCLUDE_SLOWEST_CUSTOM_TARGET_TIME = true;
+
+[Setting category="General" name="Override: Show by seconds above/below PB"]
+bool OVERRIDE_SHOW_SECONDS = false;
+
+[Setting category="General" name="Override: Seconds above PB (control-click to set value)" drag min=0 max=50]
+float OVERRIDE_SECONDS_ABOVE_PB_SHOW = 3;
+
+[Setting category="General" name="Override: Seconds below PB (control-click to set value)" drag min=0 max=50]
+float OVERRIDE_SECONDS_BELOW_PB_SHOW = 0.1;

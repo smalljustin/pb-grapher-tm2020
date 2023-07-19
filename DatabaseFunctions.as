@@ -1,7 +1,6 @@
 class DatabaseFunctions {
     string database_filename = "pb_grapher_store.db";
-    SQLite::Database@ database = SQLite::Database(database_filename);
-
+    SQLite::Database@ database;
 
     array<array<CpLog>> pendingCpLogArrayBuffer;
 
@@ -19,6 +18,21 @@ class DatabaseFunctions {
         ORDER BY cl.run_id, cl.cp_id
     """;
     DatabaseFunctions() {
+        string proper_path = IO::FromStorageFolder(database_filename);
+
+        if (!IO::FileExists(proper_path)) {
+            IO::File old_file(database_filename);
+            old_file.Open(IO::FileMode::Read);
+            IO::File new_file(proper_path);
+            new_file.Open(IO::FileMode::Write);
+            new_file.Write(old_file.Read(old_file.Size()));
+            old_file.Close();
+            new_file.Close();
+            print("Migrated to PluginStorage folder!");
+        }
+        
+        SQLite::Database@ db = SQLite::Database(proper_path);
+        @database = db;
         database.Execute("CREATE TABLE IF NOT EXISTS cp_log (cp_log_id INTEGER PRIMARY KEY AUTOINCREMENT, map_uuid VARCHAR, run_id INTEGER, cp_id INTEGER, cp_time FLOAT, UNIQUE(map_uuid, run_id, cp_id))");
         database.Execute("CREATE TABLE IF NOT EXISTS custom_time_targets (custom_target_id INTEGER PRIMARY KEY AUTOINCREMENT, map_uuid VARCHAR, target_time FLOAT)");
         // https://phiresky.github.io/blog/2020/sqlite-performance-tuning/

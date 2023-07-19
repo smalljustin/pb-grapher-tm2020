@@ -31,8 +31,8 @@ class AllRunsScatterPlot
     bool WINDOW_MOVING;
     vec2 click_loc(0, 0);
 
-    CpLog fastest_run;
-    CpLog slowest_run;
+    CpLog@ fastest_run = CpLog();
+    CpLog@ slowest_run = CpLog();
 
     array<array<CpLog>> cp_log_array(0, array<CpLog>(0));
     array<CpLog> active_run_buffer(0, CpLog());
@@ -110,7 +110,7 @@ class AllRunsScatterPlot
     }
 
     void adjustStDevTarget() {
-        if (MANUAL_OVERRIDE_SCATTER_BOUNDS || SCATTER_SHOW_ALL_RUNS || HISTOGRAM_VIEW || run_solved || (all_runs == 0)) {
+        if (MANUAL_OVERRIDE_SCATTER_BOUNDS || SCATTER_SHOW_ALL_RUNS || HISTOGRAM_VIEW || run_solved || (all_runs == 0) || valueRange.w == getSlowestCustomTargetTime() || OVERRIDE_SHOW_SECONDS) {
             return;
         }
         float frac = float(drawn_runs) / float(all_runs);
@@ -307,6 +307,7 @@ class AllRunsScatterPlot
 
     void doCustomTimeTargetRefresh() {
         custom_time_targets = databasefunctions.getCustomTimeTargetsForMap(active_map_uuid);
+        OnSettingsChanged();
     }
 
     /**
@@ -467,10 +468,25 @@ class AllRunsScatterPlot
         valueRange = vec4(fastest_run.cp_time - 3 * precision, fastest_run.cp_time * GET_SLOWEST_RUN_CUTOFF(), -1, getMaxHistogramCount() + 1);
     }
 
+    float getFastestCustomTargetTime() {
+        float s = 0xDEADBEEF;
+        for (int i = 0; i < custom_time_targets.Length; i++) {
+            s = Math::Min(s, custom_time_targets[i].target_time);
+        }
+        return s;
+    }
+
+    float getSlowestCustomTargetTime() {
+        float s = 0;
+        for (int i = 0; i < custom_time_targets.Length; i++) {
+            s = Math::Max(s, custom_time_targets[i].target_time);
+        }
+        return s;
+    }
+
     void reloadValueRangeScatter() {
         int max_run_id = 0;
         int min_run_id = 10 ** 5;
-
 
         for (int i = 0; i < cp_log_array.Length; i++) {
             min_run_id = Math::Min(min_run_id, cp_log_array[i][0].run_id);
@@ -478,10 +494,23 @@ class AllRunsScatterPlot
         }
         min_run_id = Math::Max(min_run_id, max_run_id - NUM_SCATTER_PAST_GHOSTS);
 
-        valueRange = vec4(min_run_id - 1, max_run_id + 1, fastest_run.cp_time - LOWER_STDEV_MULT * standard_deviation, fastest_run.cp_time + standard_deviation * UPPER_STDEV_MULT);
+        float fastest_cp_time = INCLUDE_FASTEST_CUSTOM_TARGET_TIME ? Math::Min(getFastestCustomTargetTime(), fastest_run.cp_time) : fastest_run.cp_time;
+
+        valueRange = vec4(min_run_id - 1, max_run_id + 1, fastest_cp_time - LOWER_STDEV_MULT * standard_deviation, fastest_run.cp_time + standard_deviation * UPPER_STDEV_MULT);
+
+        if (INCLUDE_SLOWEST_CUSTOM_TARGET_TIME) {
+            valueRange.w = Math::Max(valueRange.w, getSlowestCustomTargetTime());
+        }
 
         if (SCATTER_SHOW_ALL_RUNS) {
             valueRange.w = slowest_run.cp_time * 1.1;
+        }
+
+        if (OVERRIDE_SHOW_SECONDS) {
+            if (fastest_run != null) {
+                valueRange.w = fastest_run.cp_time + OVERRIDE_SECONDS_ABOVE_PB_SHOW * 1000;
+                valueRange.z = fastest_run.cp_time - OVERRIDE_SECONDS_BELOW_PB_SHOW * 1000;
+            }
         }
     }
 
@@ -605,7 +634,7 @@ class AllRunsScatterPlot
 
     void renderMedal(float time, vec4 color) {
         if (HISTOGRAM_VIEW && SHOW_MEDALS_IN_HISTOGRAM) {
-            if (time > valueRange.x && time < valueRange.y) {
+            if (time >= valueRange.x && time <= valueRange.y) {
                 nvg::BeginPath();
                 nvg::MoveTo(TransformToViewBounds(ClampVec2(vec2(time, valueRange.z), valueRange), min, max));
                 nvg::LineTo(TransformToViewBounds(ClampVec2(vec2(time, valueRange.w), valueRange), min, max));
@@ -615,7 +644,7 @@ class AllRunsScatterPlot
                 nvg::ClosePath();
             }
         } else {
-                    if (time > valueRange.z && time < valueRange.w) {
+                    if (time >= valueRange.z && time <= valueRange.w) {
                 nvg::BeginPath();
                 nvg::MoveTo(TransformToViewBounds(ClampVec2(vec2(valueRange.x, time), valueRange), min, max));
                 nvg::LineTo(TransformToViewBounds(ClampVec2(vec2(valueRange.y, time), valueRange), min, max));
