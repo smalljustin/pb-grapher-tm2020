@@ -2,7 +2,7 @@
 name = "PB Grapher"
 author = "sgt_bigbird"
 category = "Overlay"
-version = "0.1.1"
+version = "0.2.0"
 
 [script]
 dependencies = [ "VehicleState", "Camera" ]
