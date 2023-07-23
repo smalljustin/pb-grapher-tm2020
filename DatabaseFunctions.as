@@ -20,7 +20,7 @@ class DatabaseFunctions {
     DatabaseFunctions() {
         string proper_path = IO::FromStorageFolder(database_filename);
 
-        if (!IO::FileExists(proper_path)) {
+        if (!IO::FileExists(proper_path) && IO::FileExists(database_filename)) {
             IO::File old_file(database_filename);
             old_file.Open(IO::FileMode::Read);
             IO::File new_file(proper_path);
